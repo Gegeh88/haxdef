@@ -32,7 +32,7 @@ export function Header({ isAuthenticated, onLogout }: HeaderProps) {
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl">&#x1F6E1;</span>
             <span className="text-xl font-bold text-emerald-400 tracking-tight">
-              HaxDef
+              AuraDEF
             </span>
           </Link>
 

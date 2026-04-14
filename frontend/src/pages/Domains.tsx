@@ -117,10 +117,10 @@ export default function Domains() {
                 <h3 className="text-sm font-semibold text-emerald-400 mb-2">{t('domains.dnsTxt')}</h3>
                 <p className="text-gray-400 text-xs mb-2">{t('domains.dnsInstructions')}</p>
                 <code className="block bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-emerald-300 break-all">
-                  haxdef-verify={selectedDomain.verification_token}
+                  auradef-verify={selectedDomain.verification_token}
                 </code>
                 <p className="text-gray-500 text-xs mt-2">
-                  TXT record @ _haxdef.{selectedDomain.domain}
+                  TXT record @ _auradef.{selectedDomain.domain}
                 </p>
               </div>
 
@@ -128,7 +128,7 @@ export default function Domains() {
                 <h3 className="text-sm font-semibold text-cyan-400 mb-2">{t('domains.htmlFile')}</h3>
                 <p className="text-gray-400 text-xs mb-2">{t('domains.htmlInstructions')}</p>
                 <code className="block bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-cyan-300 break-all">
-                  https://{selectedDomain.domain}/haxdef-verify-{selectedDomain.verification_token.slice(0, 16)}.html
+                  https://{selectedDomain.domain}/auradef-verify-{selectedDomain.verification_token.slice(0, 16)}.html
                 </code>
               </div>
 
@@ -136,7 +136,7 @@ export default function Domains() {
                 <h3 className="text-sm font-semibold text-purple-400 mb-2">{t('domains.metaTag')}</h3>
                 <p className="text-gray-400 text-xs mb-2">{t('domains.metaInstructions')}</p>
                 <code className="block bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm text-purple-300 break-all">
-                  {'<meta name="haxdef-verify" content="' + selectedDomain.verification_token + '" />'}
+                  {'<meta name="auradef-verify" content="' + selectedDomain.verification_token + '" />'}
                 </code>
               </div>
             </div>

@@ -1,0 +1,13 @@
+{
+  "name": "haxdef-worker",
+  "version": "1.0.0",
+  "description": "HaxDef vulnerability scan worker",
+  "main": "src/worker.js",
+  "scripts": {
+    "start": "node src/worker.js",
+    "dev": "node --watch src/worker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.0"
+  }
+}
