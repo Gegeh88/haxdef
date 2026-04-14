@@ -5,11 +5,11 @@ function runCommand(command, args = [], options = {}) {
     const timeout = options.timeout || 300000; // 5 min default
     let stdout = '';
     let stderr = '';
+    let killed = false;
+    let resolved = false;
 
     const proc = spawn(command, args, {
-      timeout,
-      maxBuffer: 10 * 1024 * 1024, // 10MB
-      ...options,
+      env: { ...process.env, ...options.env },
     });
 
     proc.stdout.on('data', (data) => {
@@ -21,18 +21,34 @@ function runCommand(command, args = [], options = {}) {
     });
 
     proc.on('close', (code) => {
-      resolve({ code, stdout, stderr });
+      if (!resolved) {
+        resolved = true;
+        resolve({ code, stdout, stderr });
+      }
     });
 
     proc.on('error', (err) => {
-      reject(err);
+      if (!resolved) {
+        resolved = true;
+        reject(err);
+      }
     });
 
     // Kill if timeout
-    setTimeout(() => {
-      try { proc.kill('SIGTERM'); } catch {}
-      reject(new Error(`Command timed out after ${timeout}ms`));
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        killed = true;
+        try { proc.kill('SIGTERM'); } catch {}
+        setTimeout(() => {
+          try { proc.kill('SIGKILL'); } catch {}
+        }, 5000);
+        resolved = true;
+        reject(new Error(`Command timed out after ${timeout}ms`));
+      }
     }, timeout);
+
+    // Clean up timer when process ends
+    proc.on('close', () => clearTimeout(timer));
   });
 }
 

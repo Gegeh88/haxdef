@@ -4,17 +4,16 @@ async function runNucleiQuick(domain) {
   const findings = [];
 
   try {
-    // Check if nuclei is available
-    const { code: checkCode } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
+    const { stdout: versionOut, stderr: versionErr, code: checkCode } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
+    console.log('[NUCLEI-QUICK] Version:', (versionOut + versionErr).trim());
     if (checkCode !== 0) throw new Error('nuclei not found');
 
     // Run nuclei with targeted templates (high/critical severity only for quick scan)
-    const { stdout, stderr } = await runCommand('nuclei', [
+    const { stdout, stderr, code } = await runCommand('nuclei', [
       '-u', `https://${domain}`,
       '-severity', 'critical,high,medium',
       '-type', 'http',
-      '-json',
-      '-silent',
+      '-jsonl',
       '-timeout', '10',
       '-retries', '1',
       '-rate-limit', '50',
@@ -22,9 +21,12 @@ async function runNucleiQuick(domain) {
       '-concurrency', '10',
       '-no-color',
       '-exclude-type', 'ssl',
-    ], { timeout: 180000 }); // 3 min timeout for quick scan
+    ], { timeout: 300000 }); // 5 min timeout for quick scan
 
-    // Parse JSON Lines output
+    console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
+    console.log(`[NUCLEI-QUICK] Stdout length: ${stdout?.length || 0}`);
+    console.log(`[NUCLEI-QUICK] Stderr (first 500 chars): ${stderr?.slice(0, 500)}`);
+
     const lines = stdout.split('\n').filter(line => line.trim());
     for (const line of lines) {
       try {
@@ -45,17 +47,20 @@ async function runNucleiQuick(domain) {
       }
     }
 
+    console.log(`[NUCLEI-QUICK] Parsed ${findings.length} findings from ${lines.length} output lines`);
+
     if (findings.length === 0) {
       findings.push({
         type: 'nuclei-clean',
         title: 'No critical vulnerabilities found (quick scan)',
         severity: 'info',
-        description: 'Nuclei quick scan completed with no critical/high/medium findings.',
+        description: `Nuclei quick scan completed. Exit code: ${code}. Stderr: ${(stderr || '').slice(0, 200)}`,
         url: `https://${domain}`,
       });
     }
 
   } catch (err) {
+    console.error('[NUCLEI-QUICK] Error:', err.message);
     if (err.message.includes('not found') || err.message.includes('ENOENT')) {
       findings.push({
         type: 'nuclei-skipped',
