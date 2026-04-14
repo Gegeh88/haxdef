@@ -5,22 +5,30 @@ async function runNucleiFull(scanId, domain) {
   const findings = [];
 
   try {
-    // Check nuclei version and template count
+    // Check nuclei version
     const { stdout: versionOut, stderr: versionErr, code: checkCode } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
     console.log('[NUCLEI-FULL] Version:', (versionOut + versionErr).trim());
     if (checkCode !== 0) throw new Error('nuclei not found');
 
-    // Check templates exist
-    const { stdout: templateList, stderr: templateErr } = await runCommand('nuclei', ['-tl'], { timeout: 30000 });
-    const templateCount = (templateList || '').split('\n').filter(l => l.trim()).length;
-    console.log(`[NUCLEI-FULL] Templates available: ${templateCount}`);
-    if (templateErr) console.log('[NUCLEI-FULL] Template list stderr:', templateErr.slice(0, 500));
+    // Check templates (non-critical, don't let this block the scan)
+    let templateCount = 0;
+    try {
+      const { stdout: templateList, stderr: templateErr } = await runCommand('nuclei', ['-tl'], { timeout: 120000 });
+      templateCount = (templateList || '').split('\n').filter(l => l.trim()).length;
+      console.log(`[NUCLEI-FULL] Templates available: ${templateCount}`);
+      if (templateErr) console.log('[NUCLEI-FULL] Template list stderr:', templateErr.slice(0, 500));
+    } catch (tlErr) {
+      console.log('[NUCLEI-FULL] Template list check failed (non-fatal):', tlErr.message);
+    }
 
     if (templateCount === 0) {
-      // Try updating templates
-      console.log('[NUCLEI-FULL] No templates found, updating...');
-      const { stderr: updateErr } = await runCommand('nuclei', ['-update-templates'], { timeout: 120000 });
-      console.log('[NUCLEI-FULL] Template update:', updateErr?.slice(0, 500));
+      try {
+        console.log('[NUCLEI-FULL] No templates found, updating...');
+        const { stderr: updateErr } = await runCommand('nuclei', ['-update-templates'], { timeout: 180000 });
+        console.log('[NUCLEI-FULL] Template update:', updateErr?.slice(0, 500));
+      } catch (updErr) {
+        console.log('[NUCLEI-FULL] Template update failed (non-fatal):', updErr.message);
+      }
     }
 
     await updateProgress(scanId, 52, 'Running full Nuclei scan (this takes 15-40 minutes)...');
