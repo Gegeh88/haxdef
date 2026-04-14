@@ -34,3 +34,6 @@ backend/supabase/.branches/
 
 # Docker
 *.pid
+
+# Local Netlify folder
+.netlify
