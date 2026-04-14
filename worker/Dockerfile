@@ -24,10 +24,15 @@ RUN SUBFINDER_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/su
     && rm /tmp/subfinder.zip \
     && chmod +x /usr/local/bin/subfinder
 
-# Update Nuclei templates
+# Create non-root user BEFORE downloading templates
+RUN useradd -m scanner
+
+# Download Nuclei templates as the scanner user so they're accessible
+USER scanner
 RUN nuclei -update-templates -silent || true
 
-# Set up app
+# Switch back to root to set up the app
+USER root
 WORKDIR /app
 
 COPY package*.json ./
@@ -35,8 +40,10 @@ RUN npm ci --omit=dev
 
 COPY . .
 
+# Make app files readable by scanner
+RUN chown -R scanner:scanner /app
+
 # Run as non-root for security
-RUN useradd -m scanner
 USER scanner
 
 CMD ["node", "src/worker.js"]

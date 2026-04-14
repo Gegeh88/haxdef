@@ -2,6 +2,7 @@ const { supabase } = require('./lib/supabase');
 const { runQuickScan } = require('./scanner/quick-scan');
 const { runFullScan } = require('./scanner/full-scan');
 const { failScan } = require('./lib/progress');
+const { notifyScanComplete } = require('./lib/notify');
 
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000');
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_SCANS || '1');
@@ -68,9 +69,13 @@ async function executeScan(scan) {
       await runFullScan(scan.id, domain);
     }
     console.log(`[SCAN] Completed ${scan.scan_type} scan for ${domain}`);
+    // Send email notification
+    await notifyScanComplete(scan.id);
   } catch (err) {
     console.error(`[SCAN] Failed ${scan.scan_type} scan for ${domain}:`, err.message);
     await failScan(scan.id, err.message);
+    // Still notify on failure
+    await notifyScanComplete(scan.id);
   }
 }
 
