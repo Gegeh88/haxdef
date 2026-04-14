@@ -12,7 +12,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/auradef">
       <Toaster
         position="top-right"
         toastOptions={{

@@ -1,4 +1,8 @@
 {
+  "footer": {
+    "rights": "Minden jog fenntartva.",
+    "poweredBy": "Powered by AuraDEF"
+  },
   "nav": {
     "dashboard": "Vezérlőpult",
     "domains": "Domainek",

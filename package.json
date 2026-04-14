@@ -1,0 +1,27 @@
+{
+  "name": "haxdef",
+  "version": "1.0.0",
+  "description": "Vulnerability scanning web application for small and medium businesses.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gegeh88/haxdef.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Gegeh88/haxdef/issues"
+  },
+  "homepage": "https://github.com/Gegeh88/haxdef#readme",
+  "dependencies": {
+    "basic-ftp": "^5.2.2"
+  }
+}

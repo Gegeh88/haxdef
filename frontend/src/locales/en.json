@@ -1,4 +1,8 @@
 {
+  "footer": {
+    "rights": "All rights reserved.",
+    "poweredBy": "Powered by AuraDEF"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "domains": "Domains",
