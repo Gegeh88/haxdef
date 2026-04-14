@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Domains from './pages/Domains';
 import History from './pages/History';
+import ScanView from './pages/ScanView';
 import NotFound from './pages/NotFound';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -35,6 +36,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/domains" element={<Domains />} />
             <Route path="/history" element={<History />} />
+            <Route path="/scan/:scanId" element={<ScanView />} />
           </Route>
         </Route>
 

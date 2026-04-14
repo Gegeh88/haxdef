@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useDomains } from '../hooks/useDomains';
+import { startScan, verifyDomain } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export default function Domains() {
   const { t } = useTranslation();
-  const { domains, loading, addDomain, removeDomain } = useDomains();
+  const { domains, loading, addDomain, removeDomain, refetch } = useDomains();
+  const navigate = useNavigate();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState<string | null>(null);
@@ -149,8 +152,19 @@ export default function Domains() {
                 {t('common.cancel')}
               </button>
               <button
-                onClick={() => {
-                  toast.success(t('domains.verificationPending') || 'Verification will be checked when scan starts');
+                onClick={async () => {
+                  if (!showVerifyModal) return;
+                  try {
+                    const result = await verifyDomain(showVerifyModal, 'dns_txt');
+                    if (result.verified) {
+                      toast.success(t('domains.verificationSuccess'));
+                      refetch();
+                    } else {
+                      toast.error(result.error || t('domains.verificationFailed'));
+                    }
+                  } catch (err: unknown) {
+                    toast.error(err instanceof Error ? err.message : t('domains.verificationFailed'));
+                  }
                   setShowVerifyModal(null);
                 }}
                 className="px-6 py-2.5 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
@@ -213,10 +227,32 @@ export default function Domains() {
                 )}
                 {domain.is_verified && (
                   <>
-                    <button className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { scanId } = await startScan(domain.id, 'quick');
+                          toast.success('Quick scan started!');
+                          navigate(`/scan/${scanId}`);
+                        } catch (err: unknown) {
+                          toast.error(err instanceof Error ? err.message : 'Failed to start scan');
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                    >
                       {t('scans.startQuickScan')}
                     </button>
-                    <button className="px-3 py-1.5 text-xs font-medium rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const { scanId } = await startScan(domain.id, 'full');
+                          toast.success('Full scan started!');
+                          navigate(`/scan/${scanId}`);
+                        } catch (err: unknown) {
+                          toast.error(err instanceof Error ? err.message : 'Failed to start scan');
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                    >
                       {t('scans.startFullScan')}
                     </button>
                   </>
