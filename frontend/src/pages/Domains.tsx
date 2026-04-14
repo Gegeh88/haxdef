@@ -155,7 +155,7 @@ export default function Domains() {
                 onClick={async () => {
                   if (!showVerifyModal) return;
                   try {
-                    const result = await verifyDomain(showVerifyModal, 'dns_txt');
+                    const result = await verifyDomain(showVerifyModal, 'html_file');
                     if (result.verified) {
                       toast.success(t('domains.verificationSuccess'));
                       refetch();
