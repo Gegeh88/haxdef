@@ -47,6 +47,7 @@ async function runNucleiFull(scanId, domain) {
       '-system-resolvers',
       '-r', resolverFile,
       '-no-mhe',
+      '-ni',
     ], { timeout: 2400000 }); // 40 min timeout
 
     try { fs.unlinkSync(targetFile); } catch {}

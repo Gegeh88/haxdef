@@ -43,6 +43,7 @@ async function runNucleiQuick(domain) {
       '-system-resolvers',
       '-r', resolverFile,
       '-no-mhe',
+      '-ni',
       '-stats',
       '-stats-interval', '30',
     ], { timeout: 900000 }); // 15 min timeout
