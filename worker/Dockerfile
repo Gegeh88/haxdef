@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dnsutils \
     unzip \
     ca-certificates \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Nuclei
@@ -24,12 +25,18 @@ RUN SUBFINDER_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/su
     && rm /tmp/subfinder.zip \
     && chmod +x /usr/local/bin/subfinder
 
-# Create non-root user BEFORE downloading templates
-RUN useradd -m scanner
+# Create non-root user with proper home directory
+RUN useradd -m -d /home/scanner -s /bin/bash scanner
 
-# Download Nuclei templates as the scanner user so they're accessible
+# Download Nuclei templates as scanner user with explicit HOME
 USER scanner
-RUN nuclei -update-templates -silent || true
+ENV HOME=/home/scanner
+RUN nuclei -update-templates 2>&1 | tail -5 \
+    && echo "=== Template directory ===" \
+    && ls -la /home/scanner/nuclei-templates/ 2>/dev/null || ls -la /home/scanner/.local/nuclei/templates/ 2>/dev/null || echo "Checking .nuclei-templates" \
+    && ls /home/scanner/.nuclei-templates/ 2>/dev/null || echo "No templates in .nuclei-templates" \
+    && echo "=== Template count ===" \
+    && nuclei -tl 2>/dev/null | wc -l
 
 # Switch back to root to set up the app
 USER root
@@ -45,5 +52,6 @@ RUN chown -R scanner:scanner /app
 
 # Run as non-root for security
 USER scanner
+ENV HOME=/home/scanner
 
 CMD ["node", "src/worker.js"]
