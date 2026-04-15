@@ -34,7 +34,7 @@ function runCommand(command, args = [], options = {}) {
       }
     });
 
-    // Kill if timeout
+    // Kill if timeout — include partial output in error
     const timer = setTimeout(() => {
       if (!resolved) {
         killed = true;
@@ -43,7 +43,10 @@ function runCommand(command, args = [], options = {}) {
           try { proc.kill('SIGKILL'); } catch {}
         }, 5000);
         resolved = true;
-        reject(new Error(`Command timed out after ${timeout}ms`));
+        const err = new Error(`Command timed out after ${timeout}ms`);
+        err.stdout = stdout;
+        err.stderr = stderr;
+        reject(err);
       }
     }, timeout);
 

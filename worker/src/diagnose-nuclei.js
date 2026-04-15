@@ -158,6 +158,8 @@ async function diagnose() {
     }
   } catch (e) {
     console.log(`ERROR: ${e.message}`);
+    if (e.stdout) console.log(`PARTIAL STDOUT: ${e.stdout.slice(-1500)}`);
+    if (e.stderr) console.log(`PARTIAL STDERR: ${e.stderr.slice(-1500)}`);
   }
   console.log();
 
@@ -203,6 +205,8 @@ async function diagnose() {
     }
   } catch (e) {
     console.log(`ERROR: ${e.message}`);
+    if (e.stdout) console.log(`PARTIAL STDOUT: ${e.stdout.slice(-1000)}`);
+    if (e.stderr) console.log(`PARTIAL STDERR: ${e.stderr.slice(-1000)}`);
   }
   console.log();
 
@@ -261,6 +265,8 @@ async function diagnose() {
     }
   } catch (e) {
     console.log(`ERROR: ${e.message}`);
+    if (e.stdout) console.log(`PARTIAL STDOUT: ${e.stdout.slice(-1000)}`);
+    if (e.stderr) console.log(`PARTIAL STDERR: ${e.stderr.slice(-1000)}`);
   }
 
   console.log();
