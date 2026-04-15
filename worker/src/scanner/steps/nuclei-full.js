@@ -1,61 +1,57 @@
 const { runCommand } = require('../../lib/process-runner');
 const { updateProgress } = require('../../lib/progress');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 async function runNucleiFull(scanId, domain) {
   const findings = [];
+  const outputFile = path.join(os.tmpdir(), `nuclei-full-${scanId}.jsonl`);
 
   try {
-    // Check nuclei version
     const { stdout: versionOut, stderr: versionErr, code: checkCode } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
-    console.log('[NUCLEI-FULL] Version:', (versionOut + versionErr).trim());
+    console.log('[NUCLEI-FULL] Version:', (versionOut + versionErr).trim().split('\n')[0]);
     if (checkCode !== 0) throw new Error('nuclei not found');
-
-    // Check templates (non-critical, don't let this block the scan)
-    let templateCount = 0;
-    try {
-      const { stdout: templateList, stderr: templateErr } = await runCommand('nuclei', ['-tl'], { timeout: 120000 });
-      templateCount = (templateList || '').split('\n').filter(l => l.trim()).length;
-      console.log(`[NUCLEI-FULL] Templates available: ${templateCount}`);
-      if (templateErr) console.log('[NUCLEI-FULL] Template list stderr:', templateErr.slice(0, 500));
-    } catch (tlErr) {
-      console.log('[NUCLEI-FULL] Template list check failed (non-fatal):', tlErr.message);
-    }
-
-    if (templateCount === 0) {
-      try {
-        console.log('[NUCLEI-FULL] No templates found, updating...');
-        const { stderr: updateErr } = await runCommand('nuclei', ['-update-templates'], { timeout: 180000 });
-        console.log('[NUCLEI-FULL] Template update:', updateErr?.slice(0, 500));
-      } catch (updErr) {
-        console.log('[NUCLEI-FULL] Template update failed (non-fatal):', updErr.message);
-      }
-    }
 
     await updateProgress(scanId, 52, 'Running full Nuclei scan (this takes 15-40 minutes)...');
 
-    // Run full nuclei scan - removed -silent to see what's happening
+    // Write results to a file instead of relying on stdout parsing
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-u', `https://${domain}`,
       '-severity', 'info,low,medium,high,critical',
       '-type', 'http',
-      '-jsonl',
+      '-je', outputFile,
       '-timeout', '15',
       '-retries', '2',
       '-rate-limit', '100',
       '-bulk-size', '50',
       '-concurrency', '25',
       '-no-color',
-      '-stats',
-      '-stats-interval', '30',
     ], { timeout: 2400000 }); // 40 min timeout
 
     console.log(`[NUCLEI-FULL] Exit code: ${code}`);
-    console.log(`[NUCLEI-FULL] Stdout length: ${stdout?.length || 0}`);
-    console.log(`[NUCLEI-FULL] Stderr (first 1000 chars): ${stderr?.slice(0, 1000)}`);
+    console.log(`[NUCLEI-FULL] Stdout (last 500): ${(stdout || '').slice(-500)}`);
+    console.log(`[NUCLEI-FULL] Stderr (last 1000): ${(stderr || '').slice(-1000)}`);
 
-    const lines = stdout.split('\n').filter(line => line.trim());
+    // Read results from file
+    let lines = [];
+    if (fs.existsSync(outputFile)) {
+      const content = fs.readFileSync(outputFile, 'utf8');
+      lines = content.split('\n').filter(l => l.trim());
+      console.log(`[NUCLEI-FULL] Output file: ${lines.length} lines`);
+      fs.unlinkSync(outputFile); // cleanup
+    } else {
+      console.log('[NUCLEI-FULL] No output file created. Trying stdout...');
+      // Fallback: try parsing both stdout and stderr for JSON
+      const allOutput = (stdout || '') + '\n' + (stderr || '');
+      lines = allOutput.split('\n').filter(l => {
+        const trimmed = l.trim();
+        return trimmed.startsWith('{') && trimmed.endsWith('}');
+      });
+      console.log(`[NUCLEI-FULL] Fallback: found ${lines.length} JSON lines in combined output`);
+    }
+
     let processed = 0;
-
     for (const line of lines) {
       try {
         const result = JSON.parse(line);
@@ -82,36 +78,27 @@ async function runNucleiFull(scanId, domain) {
       }
     }
 
-    console.log(`[NUCLEI-FULL] Parsed ${findings.length} findings from ${lines.length} output lines`);
+    console.log(`[NUCLEI-FULL] Parsed ${findings.length} findings`);
 
     if (findings.length === 0) {
       findings.push({
         type: 'nuclei-clean',
         title: 'No vulnerabilities found (full scan)',
         severity: 'info',
-        description: `Full Nuclei scan completed. Templates scanned: ${templateCount}. Exit code: ${code}. Stderr hint: ${(stderr || '').slice(0, 200)}`,
+        description: `Full Nuclei scan completed. Exit code: ${code}. Output lines: ${lines.length}. Stderr: ${(stderr || '').slice(-300)}`,
         url: `https://${domain}`,
       });
     }
 
   } catch (err) {
     console.error('[NUCLEI-FULL] Error:', err.message);
+    // Cleanup
+    try { if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile); } catch {}
+
     if (err.message.includes('not found') || err.message.includes('ENOENT')) {
-      findings.push({
-        type: 'nuclei-skipped',
-        title: 'Full Nuclei scan skipped',
-        severity: 'info',
-        description: 'Nuclei is not installed in this environment.',
-        url: `https://${domain}`,
-      });
+      findings.push({ type: 'nuclei-skipped', title: 'Full Nuclei scan skipped', severity: 'info', description: 'Nuclei is not installed.', url: `https://${domain}` });
     } else {
-      findings.push({
-        type: 'nuclei-error',
-        title: 'Full Nuclei scan error',
-        severity: 'info',
-        description: `Error: ${err.message}`,
-        url: `https://${domain}`,
-      });
+      findings.push({ type: 'nuclei-error', title: 'Full Nuclei scan error', severity: 'info', description: `Error: ${err.message}`, url: `https://${domain}` });
     }
   }
 
