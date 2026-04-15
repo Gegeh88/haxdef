@@ -34,7 +34,8 @@ async function runNucleiFull(scanId, domain) {
       '-t', templateDir,
       '-severity', 'info,low,medium,high,critical',
       '-type', 'http',
-      '-je', outputFile,
+      '-jsonl',
+      '-output', outputFile,
       '-duc',
       '-timeout', '30',
       '-retries', '2',
@@ -49,24 +50,28 @@ async function runNucleiFull(scanId, domain) {
       '-no-mhe',
       '-ni',
       '-nh',
-    ], { timeout: 2400000, inheritStdio: true }); // 40 min, direct console output
+    ], { timeout: 3300000, inheritStdio: true }); // 55 min timeout
 
     try { fs.unlinkSync(targetFile); } catch {}
     try { fs.unlinkSync(resolverFile); } catch {}
 
     console.log(`[NUCLEI-FULL] Exit code: ${code}`);
 
-    // Read results from file — -je writes a JSON array, not JSON Lines
+    // Read results from file — -jsonl -output writes one JSON object per line
     let results = [];
     if (fs.existsSync(outputFile)) {
       const content = fs.readFileSync(outputFile, 'utf8').trim();
-      console.log(`[NUCLEI-FULL] Output file size: ${content.length} bytes, starts with: ${content.slice(0, 50)}`);
-      try {
-        const parsed = JSON.parse(content);
-        results = Array.isArray(parsed) ? parsed : [parsed];
-      } catch {
-        // Fallback: try JSON Lines
+      console.log(`[NUCLEI-FULL] Output file size: ${content.length} bytes`);
+      if (content.length > 2) {
+        // Try JSON Lines first (one JSON per line)
         results = content.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+        // Fallback: try as JSON array
+        if (results.length === 0) {
+          try {
+            const parsed = JSON.parse(content);
+            results = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {}
+        }
       }
       console.log(`[NUCLEI-FULL] Parsed ${results.length} results from file`);
       fs.unlinkSync(outputFile);
@@ -116,13 +121,44 @@ async function runNucleiFull(scanId, domain) {
 
   } catch (err) {
     console.error('[NUCLEI-FULL] Error:', err.message);
-    // Cleanup
+
+    // On timeout, still read partial results from the output file
+    if (err.message.includes('timed out') && fs.existsSync(outputFile)) {
+      console.log('[NUCLEI-FULL] Timeout — reading partial results...');
+      try {
+        const content = fs.readFileSync(outputFile, 'utf8').trim();
+        if (content.length > 2) {
+          const partialResults = content.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+          console.log(`[NUCLEI-FULL] Recovered ${partialResults.length} partial results`);
+          for (const result of partialResults) {
+            if (!result || typeof result !== 'object') continue;
+            findings.push({
+              type: 'nuclei',
+              title: result.info?.name || result['template-id'] || 'Nuclei finding',
+              severity: (result.info?.severity || 'info').toLowerCase(),
+              description: result.info?.description || `Found by template: ${result['template-id'] || 'unknown'}`,
+              remediation: result.info?.remediation || undefined,
+              evidence: result['matched-at'] || result.host || '',
+              url: result['matched-at'] || result.host || `https://${domain}`,
+              templateId: result['template-id'] || result.templateID,
+              tags: result.info?.tags || [],
+              reference: result.info?.reference || [],
+            });
+          }
+        }
+      } catch (readErr) {
+        console.error('[NUCLEI-FULL] Failed to read partial results:', readErr.message);
+      }
+    }
+
     try { if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile); } catch {}
 
-    if (err.message.includes('not found') || err.message.includes('ENOENT')) {
-      findings.push({ type: 'nuclei-skipped', title: 'Full Nuclei scan skipped', severity: 'info', description: 'Nuclei is not installed.', url: `https://${domain}` });
-    } else {
-      findings.push({ type: 'nuclei-error', title: 'Full Nuclei scan error', severity: 'info', description: `Error: ${err.message}`, url: `https://${domain}` });
+    if (findings.length === 0) {
+      if (err.message.includes('not found') || err.message.includes('ENOENT')) {
+        findings.push({ type: 'nuclei-skipped', title: 'Full Nuclei scan skipped', severity: 'info', description: 'Nuclei is not installed.', url: `https://${domain}` });
+      } else {
+        findings.push({ type: 'nuclei-error', title: 'Full Nuclei scan error', severity: 'info', description: `Error: ${err.message}`, url: `https://${domain}` });
+      }
     }
   }
 

@@ -33,7 +33,8 @@ async function runNucleiQuick(domain) {
       '-t', templateDir,
       '-severity', 'critical,high,medium',
       '-type', 'http',
-      '-je', outputFile,
+      '-jsonl',
+      '-output', outputFile,
       '-duc',
       '-timeout', '15',
       '-retries', '1',
@@ -55,16 +56,19 @@ async function runNucleiQuick(domain) {
 
     console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
 
-    // Read results from file — -je writes a JSON array
+    // Read results from file — -jsonl -output writes one JSON per line (streamed, survives timeout)
     let results = [];
     if (fs.existsSync(outputFile)) {
       const content = fs.readFileSync(outputFile, 'utf8').trim();
       console.log(`[NUCLEI-QUICK] Output file size: ${content.length} bytes`);
-      try {
-        const parsed = JSON.parse(content);
-        results = Array.isArray(parsed) ? parsed : [parsed];
-      } catch {
+      if (content.length > 2) {
         results = content.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+        if (results.length === 0) {
+          try {
+            const parsed = JSON.parse(content);
+            results = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {}
+        }
       }
       console.log(`[NUCLEI-QUICK] Parsed ${results.length} results from file`);
       fs.unlinkSync(outputFile);
