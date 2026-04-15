@@ -29,15 +29,18 @@ async function diagnose() {
 
   // Step 2: Check network connectivity
   console.log('--- STEP 2: Network Test ---');
-  try {
-    const { stdout: curlOut, stderr: curlErr, code: curlCode } = await runCommand('curl', [
-      '-s', '-o', '/dev/null', '-w', '%{http_code} %{time_total}s',
-      '--max-time', '10',
-      TARGET
-    ], { timeout: 15000 });
-    console.log(`curl ${TARGET}: HTTP ${curlOut.trim()} (exit: ${curlCode})`);
-  } catch (e) {
-    console.log(`curl failed: ${e.message}`);
+  const testUrls = [TARGET, 'https://ginandjuice.shop', 'http://demo.testfire.net'];
+  for (const url of testUrls) {
+    try {
+      const { stdout: curlOut, code: curlCode } = await runCommand('curl', [
+        '-s', '-o', '/dev/null', '-w', '%{http_code} %{time_total}s',
+        '--max-time', '10',
+        url
+      ], { timeout: 15000 });
+      console.log(`  curl ${url}: HTTP ${curlOut.trim()} (exit: ${curlCode})`);
+    } catch (e) {
+      console.log(`  curl ${url}: FAILED - ${e.message}`);
+    }
   }
   console.log();
 
