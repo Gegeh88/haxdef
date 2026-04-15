@@ -109,7 +109,7 @@ async function runNucleiFull(scanId, domain) {
         type: 'nuclei-clean',
         title: 'No vulnerabilities found (full scan)',
         severity: 'info',
-        description: `Full Nuclei scan completed. Exit code: ${code}. Results: ${results.length}. Stderr: ${(stderr || '').slice(-300)}`,
+        description: `Full Nuclei scan completed with exit code ${code}. No vulnerabilities detected.`,
         url: `https://${domain}`,
       });
     }

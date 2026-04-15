@@ -22,24 +22,34 @@ async function runNucleiQuick(domain) {
     fs.writeFileSync(targetFile, urls.join('\n') + '\n');
     console.log(`[NUCLEI-QUICK] Targets: ${urls.join(', ')}`);
 
-    // Write public DNS resolvers for Go's DNS resolver (Docker DNS doesn't work with Go)
+    // DNS resolvers for Go's resolver (Docker IPv6 DNS doesn't work)
     const resolverFile = path.join(os.tmpdir(), `resolvers-quick-${Date.now()}.txt`);
     fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
 
+    // Quick scan: use specific template dirs for speed (~500 templates instead of 5981)
+    const quickTemplateDirs = [
+      `${templateDir}/http/misconfiguration`,
+      `${templateDir}/http/technologies`,
+      `${templateDir}/http/exposed-panels`,
+      `${templateDir}/http/cves`,
+    ];
+    const templateArgs = [];
+    for (const dir of quickTemplateDirs) {
+      templateArgs.push('-t', dir);
+    }
+
     const { code } = await runCommand('nuclei', [
       '-l', targetFile,
-      '-t', templateDir,
+      ...templateArgs,
       '-severity', 'critical,high,medium',
-      '-type', 'http',
       '-je', outputFile,
       '-duc',
-      '-timeout', '30',
-      '-retries', '3',
-      '-rate-limit', '80',
-      '-bulk-size', '15',
-      '-concurrency', '10',
+      '-timeout', '15',
+      '-retries', '1',
+      '-rate-limit', '100',
+      '-bulk-size', '25',
+      '-concurrency', '25',
       '-no-color',
-      '-exclude-type', 'ssl',
       '-system-resolvers',
       '-r', resolverFile,
       '-no-mhe',
@@ -47,18 +57,18 @@ async function runNucleiQuick(domain) {
       '-nh',
       '-stats',
       '-stats-interval', '30',
-    ], { timeout: 900000, inheritStdio: true }); // 15 min, direct console output
+    ], { timeout: 600000, inheritStdio: true }); // 10 min max
 
     try { fs.unlinkSync(targetFile); } catch {}
     try { fs.unlinkSync(resolverFile); } catch {}
 
     console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
 
-    // Read results from file — -je writes a JSON array, not JSON Lines
+    // Read results from file — -je writes a JSON array
     let results = [];
     if (fs.existsSync(outputFile)) {
       const content = fs.readFileSync(outputFile, 'utf8').trim();
-      console.log(`[NUCLEI-QUICK] Output file size: ${content.length} bytes, starts with: ${content.slice(0, 50)}`);
+      console.log(`[NUCLEI-QUICK] Output file size: ${content.length} bytes`);
       try {
         const parsed = JSON.parse(content);
         results = Array.isArray(parsed) ? parsed : [parsed];
@@ -76,7 +86,6 @@ async function runNucleiQuick(domain) {
       if (!result || typeof result !== 'object') continue;
 
       if (i === 0) {
-        console.log('[NUCLEI-QUICK] Sample keys:', Object.keys(result).join(', '));
         console.log('[NUCLEI-QUICK] Sample:', JSON.stringify(result).slice(0, 500));
       }
       findings.push({
@@ -92,14 +101,14 @@ async function runNucleiQuick(domain) {
       });
     }
 
-    console.log(`[NUCLEI-QUICK] Parsed ${findings.length} findings`);
+    console.log(`[NUCLEI-QUICK] Total findings: ${findings.length}`);
 
     if (findings.length === 0) {
       findings.push({
         type: 'nuclei-clean',
         title: 'No critical vulnerabilities found (quick scan)',
         severity: 'info',
-        description: `Nuclei quick scan completed. Exit code: ${code}. Results: ${results.length}. Stderr: ${(stderr || '').slice(-200)}`,
+        description: `Nuclei quick scan completed with exit code ${code}.`,
         url: `https://${domain}`,
       });
     }
