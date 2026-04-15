@@ -1,249 +1,129 @@
 /**
- * Nuclei Diagnostic Script v3
- * KEY INSIGHT: Nuclei loads ALL templates from default dir even when -t is specified.
- * Solution: Copy test templates to a MINI temp dir and use -td to override.
+ * Nuclei Diagnostic Script v4
+ * Uses stdio:'inherit' so nuclei output goes directly to Railway logs.
+ * No buffering, no pipe issues.
  */
 
-const { runCommand } = require('./lib/process-runner');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const TARGET = 'https://ginandjuice.shop'; // PortSwigger vulnerable test site
-const TARGET2 = 'https://aidream.hu';
+const TARGET = 'https://ginandjuice.shop';
 const HOME = process.env.HOME || '/home/scanner';
 const TEMPLATE_DIR = `${HOME}/nuclei-templates`;
 
+function runDirect(command, args, timeoutMs = 120000) {
+  return new Promise((resolve, reject) => {
+    console.log(`  [RUN] ${command} ${args.join(' ')}`);
+    const proc = spawn(command, args, {
+      stdio: 'inherit', // Direct output to console!
+      env: process.env,
+    });
+
+    const timer = setTimeout(() => {
+      console.log(`  [TIMEOUT] Killing after ${timeoutMs / 1000}s`);
+      try { proc.kill('SIGKILL'); } catch {}
+      resolve(-1);
+    }, timeoutMs);
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      console.log(`  [DONE] Exit code: ${code}`);
+      resolve(code);
+    });
+
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      console.log(`  [ERROR] ${err.message}`);
+      resolve(-2);
+    });
+  });
+}
+
 async function diagnose() {
-  console.log('=== NUCLEI DIAGNOSTIC v3 ===');
+  console.log('=== NUCLEI DIAGNOSTIC v4 (direct output) ===');
   console.log(`Time: ${new Date().toISOString()}`);
-  console.log(`Target: ${TARGET}`);
+  console.log(`DNS: `);
+  try { console.log(fs.readFileSync('/etc/resolv.conf', 'utf8').trim()); } catch {}
+  console.log();
 
-  // Step 1: Quick checks
-  console.log('\n--- STEP 1: Version + Network ---');
-  const { stdout: ver, stderr: verErr } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
-  console.log(`Nuclei: ${(ver + verErr).trim().split('\n')[0]}`);
+  // Test 1: Minimal nuclei call — version only
+  console.log('--- TEST 1: nuclei -version ---');
+  await runDirect('nuclei', ['-version'], 10000);
+  console.log();
 
-  for (const url of [TARGET, TARGET2]) {
-    try {
-      const { stdout: curlOut, code: cc } = await runCommand('curl', [
-        '-s', '-o', '/dev/null', '-w', '%{http_code} %{time_total}s', '--max-time', '10', url
-      ], { timeout: 15000 });
-      console.log(`  curl ${url}: ${curlOut.trim()} (exit: ${cc})`);
-    } catch (e) { console.log(`  curl ${url}: FAIL - ${e.message}`); }
-  }
+  // Test 2: curl target (sanity check)
+  console.log('--- TEST 2: curl target ---');
+  await runDirect('curl', ['-s', '-o', '/dev/null', '-w', '%{http_code} %{time_total}s', '--max-time', '10', TARGET], 15000);
+  console.log();
 
-  // Check resolv.conf
-  try {
-    const { stdout: rc } = await runCommand('cat', ['/etc/resolv.conf'], { timeout: 3000 });
-    console.log(`  resolv.conf: ${rc.trim()}`);
-  } catch {}
-
-  // Step 2: Create MINI template dir (avoid loading 12,958 templates)
-  console.log('\n--- STEP 2: Create Mini Template Dir ---');
+  // Create mini template dir with a single template
   const miniDir = path.join(os.tmpdir(), `nuclei-mini-${Date.now()}`);
   fs.mkdirSync(miniDir, { recursive: true });
 
-  // Find and copy a few specific templates
-  const templatesToCopy = [];
-  const searchPaths = [
-    'http/misconfiguration/http-missing-security-headers.yaml',
-    'http/technologies/tech-detect.yaml',
-    'http/misconfiguration/aspx-debug-mode.yaml',
-    'http/exposed-panels/wordpress-login.yaml',
-  ];
-
-  for (const relPath of searchPaths) {
-    const fullPath = path.join(TEMPLATE_DIR, relPath);
-    try {
-      const { code } = await runCommand('test', ['-f', fullPath], { timeout: 3000 });
-      if (code === 0) {
-        // Copy to mini dir (preserve relative structure)
-        const destDir = path.join(miniDir, path.dirname(relPath));
-        fs.mkdirSync(destDir, { recursive: true });
-        fs.copyFileSync(fullPath, path.join(miniDir, relPath));
-        templatesToCopy.push(relPath);
-        console.log(`  Copied: ${relPath}`);
-      }
-    } catch {}
-  }
-
-  // If none found, search for any
-  if (templatesToCopy.length === 0) {
-    console.log('  No specific templates found, searching...');
-    const { stdout: findOut } = await runCommand('find', [
-      TEMPLATE_DIR, '-name', '*.yaml', '-path', '*/http/*', '-type', 'f'
-    ], { timeout: 15000 });
-    const found = findOut.split('\n').filter(l => l.trim()).slice(0, 5);
-    for (const f of found) {
-      const rel = f.replace(TEMPLATE_DIR + '/', '');
-      const destDir = path.join(miniDir, path.dirname(rel));
-      fs.mkdirSync(destDir, { recursive: true });
-      fs.copyFileSync(f, path.join(miniDir, rel));
-      templatesToCopy.push(rel);
-      console.log(`  Copied: ${rel}`);
+  // Copy ONE template
+  const srcTemplate = path.join(TEMPLATE_DIR, 'http/misconfiguration/http-missing-security-headers.yaml');
+  const destTemplate = path.join(miniDir, 'http-missing-security-headers.yaml');
+  try {
+    fs.copyFileSync(srcTemplate, destTemplate);
+    console.log(`Copied template to ${destTemplate}`);
+  } catch (e) {
+    // Find any template
+    console.log('Main template not found, searching...');
+    const { stdout } = require('child_process').execSync(
+      `find ${TEMPLATE_DIR} -name "*.yaml" -path "*/http/*" -type f | head -1`
+    ).toString().trim();
+    if (stdout) {
+      fs.copyFileSync(stdout, destTemplate);
+      console.log(`Copied ${path.basename(stdout)} instead`);
     }
   }
+  console.log();
 
-  // Count files in mini dir
-  const { stdout: miniCount } = await runCommand('find', [miniDir, '-name', '*.yaml', '-type', 'f'], { timeout: 5000 });
-  const miniTemplateCount = miniCount.split('\n').filter(l => l.trim()).length;
-  console.log(`  Mini template dir: ${miniDir} (${miniTemplateCount} templates)`);
-
-  // Create resolver file
-  const resolverFile = path.join(os.tmpdir(), 'resolvers-diag.txt');
-  fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
-
-  // Step 3: Run nuclei with MINI template dir (key test!)
-  console.log('\n--- STEP 3: Nuclei with MINI template dir ---');
-  const outputFile = path.join(os.tmpdir(), `nuclei-diag-${Date.now()}.jsonl`);
-  const nucleiArgs = [
+  // Test 3: Nuclei with ABSOLUTE MINIMUM flags — single template, direct output
+  console.log('--- TEST 3: nuclei MINIMAL (1 template, direct output) ---');
+  console.log('This should show EXACTLY where nuclei hangs...');
+  const exitCode = await runDirect('nuclei', [
     '-u', TARGET,
-    '-t', miniDir,
-    '-c', '1',
-    '-rl', '10',
-    '-timeout', '30',
+    '-t', destTemplate,
     '-duc',
-    '-system-resolvers',
-    '-r', resolverFile,
-    '-no-mhe',
     '-ni',
     '-nh',
-    '-je', outputFile,
     '-no-color',
-    '-stats',
-    '-stats-interval', '10',
-    '-debug',
-  ];
-  console.log(`  Command: nuclei ${nucleiArgs.join(' ')}`);
-  console.log(`  Timeout: 120s`);
-  const startTime = Date.now();
+    '-v',
+  ], 90000); // 90 second timeout
+  console.log();
 
-  try {
-    const { stdout, stderr, code } = await runCommand('nuclei', nucleiArgs, { timeout: 120000 });
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  // Test 4: If test 3 timed out, try with explicit resolvers only
+  if (exitCode === -1) {
+    console.log('--- TEST 4: nuclei with resolvers file ---');
+    const resolverFile = path.join(os.tmpdir(), 'resolvers.txt');
+    fs.writeFileSync(resolverFile, '8.8.8.8:53\n1.1.1.1:53\n');
 
-    console.log(`\n  Exit code: ${code} (took ${elapsed}s)`);
-    console.log(`  STDOUT (last 2000):\n${(stdout || '').slice(-2000)}`);
-    console.log(`  STDERR (last 2000):\n${(stderr || '').slice(-2000)}`);
-
-    if (fs.existsSync(outputFile)) {
-      const content = fs.readFileSync(outputFile, 'utf8').trim();
-      console.log(`  Output file: ${content.length} bytes`);
-      if (content.length > 5) {
-        console.log(`  *** RESULTS FOUND! ***`);
-        console.log(`  ${content.slice(0, 3000)}`);
-      } else {
-        console.log(`  Empty output: "${content}"`);
-      }
-    } else {
-      console.log('  No output file.');
-    }
-  } catch (e) {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`\n  ERROR after ${elapsed}s: ${e.message}`);
-    if (e.stdout) console.log(`  PARTIAL STDOUT:\n${e.stdout.slice(-2000)}`);
-    if (e.stderr) console.log(`  PARTIAL STDERR:\n${e.stderr.slice(-2000)}`);
-  }
-
-  // Step 4: Same test but with FULL template dir for comparison
-  console.log('\n--- STEP 4: Nuclei with FULL template dir (for comparison) ---');
-  const outputFile2 = path.join(os.tmpdir(), `nuclei-diag2-${Date.now()}.jsonl`);
-  const nucleiArgs2 = [
-    '-u', TARGET,
-    '-t', `${TEMPLATE_DIR}/http/misconfiguration/`,
-    '-c', '1',
-    '-rl', '10',
-    '-timeout', '30',
-    '-duc',
-    '-system-resolvers',
-    '-r', resolverFile,
-    '-no-mhe',
-    '-ni',
-    '-nh',
-    '-je', outputFile2,
-    '-no-color',
-    '-stats',
-    '-stats-interval', '10',
-  ];
-  console.log(`  Command: nuclei -u ${TARGET} -t ${TEMPLATE_DIR}/http/misconfiguration/ ...`);
-  console.log(`  Timeout: 180s`);
-  const startTime2 = Date.now();
-
-  try {
-    const { stdout, stderr, code } = await runCommand('nuclei', nucleiArgs2, { timeout: 180000 });
-    const elapsed = ((Date.now() - startTime2) / 1000).toFixed(1);
-
-    console.log(`\n  Exit code: ${code} (took ${elapsed}s)`);
-    console.log(`  STDOUT (last 1500):\n${(stdout || '').slice(-1500)}`);
-    console.log(`  STDERR (last 1500):\n${(stderr || '').slice(-1500)}`);
-
-    if (fs.existsSync(outputFile2)) {
-      const content = fs.readFileSync(outputFile2, 'utf8').trim();
-      console.log(`  Output file: ${content.length} bytes`);
-      if (content.length > 5) {
-        console.log(`  *** RESULTS FOUND! ***`);
-        console.log(`  ${content.slice(0, 2000)}`);
-      }
-    }
-  } catch (e) {
-    const elapsed = ((Date.now() - startTime2) / 1000).toFixed(1);
-    console.log(`\n  ERROR after ${elapsed}s: ${e.message}`);
-    if (e.stdout) console.log(`  PARTIAL STDOUT:\n${e.stdout.slice(-1500)}`);
-    if (e.stderr) console.log(`  PARTIAL STDERR:\n${e.stderr.slice(-1500)}`);
-  }
-
-  // Step 5: Test aidream.hu with mini dir
-  console.log('\n--- STEP 5: aidream.hu with MINI template dir ---');
-  const outputFile3 = path.join(os.tmpdir(), `nuclei-diag3-${Date.now()}.jsonl`);
-  const startTime3 = Date.now();
-
-  try {
-    const { stdout, stderr, code } = await runCommand('nuclei', [
-      '-u', TARGET2,
-      '-t', miniDir,
-      '-c', '1',
-      '-rl', '10',
-      '-timeout', '30',
+    await runDirect('nuclei', [
+      '-u', TARGET,
+      '-t', destTemplate,
       '-duc',
-      '-system-resolvers',
-      '-r', resolverFile,
-      '-no-mhe',
       '-ni',
       '-nh',
-      '-je', outputFile3,
+      '-system-resolvers',
+      '-r', resolverFile,
       '-no-color',
-      '-stats',
-    ], { timeout: 120000 });
-    const elapsed = ((Date.now() - startTime3) / 1000).toFixed(1);
-
-    console.log(`  Exit code: ${code} (took ${elapsed}s)`);
-    console.log(`  STDOUT (last 1500):\n${(stdout || '').slice(-1500)}`);
-    console.log(`  STDERR (last 1500):\n${(stderr || '').slice(-1500)}`);
-
-    if (fs.existsSync(outputFile3)) {
-      const content = fs.readFileSync(outputFile3, 'utf8').trim();
-      console.log(`  Output file: ${content.length} bytes`);
-      if (content.length > 5) {
-        console.log(`  *** RESULTS FOUND! ***`);
-        console.log(`  ${content.slice(0, 2000)}`);
-      }
-    }
-  } catch (e) {
-    const elapsed = ((Date.now() - startTime3) / 1000).toFixed(1);
-    console.log(`  ERROR after ${elapsed}s: ${e.message}`);
-    if (e.stdout) console.log(`  PARTIAL STDOUT:\n${e.stdout.slice(-1500)}`);
-    if (e.stderr) console.log(`  PARTIAL STDERR:\n${e.stderr.slice(-1500)}`);
+      '-v',
+    ], 90000);
+    console.log();
   }
 
-  // Cleanup
-  try { await runCommand('rm', ['-rf', miniDir], { timeout: 5000 }); } catch {}
-  try { fs.unlinkSync(resolverFile); } catch {}
-  try { fs.unlinkSync(outputFile); } catch {}
-  try { fs.unlinkSync(outputFile2); } catch {}
-  try { fs.unlinkSync(outputFile3); } catch {}
+  // Test 5: Try nuclei health check to see what it reports
+  console.log('--- TEST 5: nuclei -hc (health check) ---');
+  await runDirect('nuclei', ['-hc'], 60000);
+  console.log();
 
-  console.log('\n=== NUCLEI DIAGNOSTIC END ===');
+  // Cleanup
+  try { fs.rmSync(miniDir, { recursive: true }); } catch {}
+
+  console.log('=== NUCLEI DIAGNOSTIC v4 END ===');
 }
 
 if (require.main === module) {
