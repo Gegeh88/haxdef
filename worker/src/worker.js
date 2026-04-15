@@ -124,6 +124,18 @@ async function main() {
   // Ensure templates are ready before accepting scans
   await ensureNucleiTemplates();
 
+  // Run diagnostic if NUCLEI_DIAGNOSE env var is set
+  if (process.env.NUCLEI_DIAGNOSE === 'true') {
+    console.log('[INIT] Running Nuclei diagnostics...');
+    try {
+      const { diagnose } = require('./diagnose-nuclei');
+      await diagnose();
+    } catch (err) {
+      console.error('[INIT] Diagnostic error:', err.message);
+    }
+    console.log('[INIT] Diagnostic done. Starting normal polling...');
+  }
+
   setInterval(pollForScans, POLL_INTERVAL);
   pollForScans();
 }
