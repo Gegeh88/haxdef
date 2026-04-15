@@ -79,7 +79,7 @@ async function runNucleiQuick(domain) {
         type: 'nuclei-clean',
         title: 'No critical vulnerabilities found (quick scan)',
         severity: 'info',
-        description: `Nuclei quick scan completed. Exit code: ${code}. Output lines: ${lines.length}. Stderr: ${(stderr || '').slice(-200)}`,
+        description: `Nuclei quick scan completed. Exit code: ${code}. Results: ${results.length}. Stderr: ${(stderr || '').slice(-200)}`,
         url: `https://${domain}`,
       });
     }
