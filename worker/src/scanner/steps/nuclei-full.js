@@ -61,17 +61,22 @@ async function runNucleiFull(scanId, domain) {
     for (const line of lines) {
       try {
         const result = JSON.parse(line);
+        // Log first finding to understand the JSON structure
+        if (processed === 0) {
+          console.log('[NUCLEI-FULL] Sample finding keys:', Object.keys(result).join(', '));
+          console.log('[NUCLEI-FULL] Sample finding:', JSON.stringify(result).slice(0, 500));
+        }
         findings.push({
           type: 'nuclei',
-          title: result.info?.name || result['template-id'] || 'Unknown vulnerability',
-          severity: (result.info?.severity || 'info').toLowerCase(),
-          description: result.info?.description || `Found by template: ${result['template-id']}`,
-          remediation: result.info?.remediation || undefined,
-          evidence: result['matched-at'] || result.host || '',
-          url: result['matched-at'] || `https://${domain}`,
-          templateId: result['template-id'],
-          tags: result.info?.tags || [],
-          reference: result.info?.reference || [],
+          title: result.info?.name || result['template-id'] || result.templateID || result.template || 'Nuclei finding',
+          severity: (result.info?.severity || result.severity || 'info').toLowerCase(),
+          description: result.info?.description || result.description || `Found by template: ${result['template-id'] || result.templateID || result.template || 'unknown'}`,
+          remediation: result.info?.remediation || result.remediation || undefined,
+          evidence: result['matched-at'] || result.matched || result.host || result.url || '',
+          url: result['matched-at'] || result.matched || result.host || result.url || `https://${domain}`,
+          templateId: result['template-id'] || result.templateID || result.template,
+          tags: result.info?.tags || result.tags || [],
+          reference: result.info?.reference || result.reference || [],
         });
 
         processed++;
