@@ -39,57 +39,53 @@ async function runNucleiFull(scanId, domain) {
     console.log(`[NUCLEI-FULL] Stdout (last 500): ${(stdout || '').slice(-500)}`);
     console.log(`[NUCLEI-FULL] Stderr (last 1000): ${(stderr || '').slice(-1000)}`);
 
-    // Read results from file
-    let lines = [];
+    // Read results from file — -je writes a JSON array, not JSON Lines
+    let results = [];
     if (fs.existsSync(outputFile)) {
-      const content = fs.readFileSync(outputFile, 'utf8');
-      lines = content.split('\n').filter(l => l.trim());
-      console.log(`[NUCLEI-FULL] Output file: ${lines.length} lines`);
-      fs.unlinkSync(outputFile); // cleanup
+      const content = fs.readFileSync(outputFile, 'utf8').trim();
+      console.log(`[NUCLEI-FULL] Output file size: ${content.length} bytes, starts with: ${content.slice(0, 50)}`);
+      try {
+        const parsed = JSON.parse(content);
+        results = Array.isArray(parsed) ? parsed : [parsed];
+      } catch {
+        // Fallback: try JSON Lines
+        results = content.split('\n').filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+      }
+      console.log(`[NUCLEI-FULL] Parsed ${results.length} results from file`);
+      fs.unlinkSync(outputFile);
     } else {
-      console.log('[NUCLEI-FULL] No output file created. Trying stdout...');
-      // Fallback: try parsing both stdout and stderr for JSON
-      const allOutput = (stdout || '') + '\n' + (stderr || '');
-      lines = allOutput.split('\n').filter(l => {
-        const trimmed = l.trim();
-        return trimmed.startsWith('{') && trimmed.endsWith('}');
-      });
-      console.log(`[NUCLEI-FULL] Fallback: found ${lines.length} JSON lines in combined output`);
+      console.log('[NUCLEI-FULL] No output file created.');
     }
 
-    let processed = 0;
-    for (const line of lines) {
-      try {
-        const result = JSON.parse(line);
-        // Log first finding to understand the JSON structure
-        if (processed === 0) {
-          console.log('[NUCLEI-FULL] Sample finding keys:', Object.keys(result).join(', '));
-          console.log('[NUCLEI-FULL] Sample finding:', JSON.stringify(result).slice(0, 500));
-        }
-        findings.push({
-          type: 'nuclei',
-          title: result.info?.name || result['template-id'] || result.templateID || result.template || 'Nuclei finding',
-          severity: (result.info?.severity || result.severity || 'info').toLowerCase(),
-          description: result.info?.description || result.description || `Found by template: ${result['template-id'] || result.templateID || result.template || 'unknown'}`,
-          remediation: result.info?.remediation || result.remediation || undefined,
-          evidence: result['matched-at'] || result.matched || result.host || result.url || '',
-          url: result['matched-at'] || result.matched || result.host || result.url || `https://${domain}`,
-          templateId: result['template-id'] || result.templateID || result.template,
-          tags: result.info?.tags || result.tags || [],
-          reference: result.info?.reference || result.reference || [],
-        });
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (!result || typeof result !== 'object') continue;
 
-        processed++;
-        if (processed % 10 === 0) {
-          const progress = Math.min(90, 51 + Math.floor((processed / Math.max(lines.length, 1)) * 40));
-          await updateProgress(scanId, progress, `Nuclei: ${processed} findings so far...`);
-        }
-      } catch {
-        // Skip unparseable lines
+      if (i === 0) {
+        console.log('[NUCLEI-FULL] Sample finding keys:', Object.keys(result).join(', '));
+        console.log('[NUCLEI-FULL] Sample finding:', JSON.stringify(result).slice(0, 500));
+      }
+
+      findings.push({
+        type: 'nuclei',
+        title: result.info?.name || result['template-id'] || result.templateID || result.template || 'Nuclei finding',
+        severity: (result.info?.severity || result.severity || 'info').toLowerCase(),
+        description: result.info?.description || result.description || `Found by template: ${result['template-id'] || result.templateID || result.template || 'unknown'}`,
+        remediation: result.info?.remediation || result.remediation || undefined,
+        evidence: result['matched-at'] || result.matched || result.host || result.url || '',
+        url: result['matched-at'] || result.matched || result.host || result.url || `https://${domain}`,
+        templateId: result['template-id'] || result.templateID || result.template,
+        tags: result.info?.tags || result.tags || [],
+        reference: result.info?.reference || result.reference || [],
+      });
+
+      if ((i + 1) % 10 === 0) {
+        const progress = Math.min(90, 51 + Math.floor(((i + 1) / results.length) * 40));
+        await updateProgress(scanId, progress, `Nuclei: ${i + 1} findings so far...`);
       }
     }
 
-    console.log(`[NUCLEI-FULL] Parsed ${findings.length} findings`);
+    console.log(`[NUCLEI-FULL] Total Nuclei findings: ${findings.length}`);
 
     if (findings.length === 0) {
       findings.push({
