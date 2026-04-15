@@ -22,6 +22,10 @@ async function runNucleiQuick(domain) {
     fs.writeFileSync(targetFile, urls.join('\n') + '\n');
     console.log(`[NUCLEI-QUICK] Targets: ${urls.join(', ')}`);
 
+    // Write public DNS resolvers for Go's DNS resolver (Docker DNS doesn't work with Go)
+    const resolverFile = path.join(os.tmpdir(), `resolvers-quick-${Date.now()}.txt`);
+    fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
+
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-l', targetFile,
       '-t', templateDir,
@@ -29,16 +33,22 @@ async function runNucleiQuick(domain) {
       '-type', 'http',
       '-je', outputFile,
       '-duc',
-      '-timeout', '20',
-      '-retries', '2',
-      '-rate-limit', '100',
-      '-bulk-size', '25',
-      '-concurrency', '15',
+      '-timeout', '30',
+      '-retries', '3',
+      '-rate-limit', '80',
+      '-bulk-size', '15',
+      '-concurrency', '10',
       '-no-color',
       '-exclude-type', 'ssl',
+      '-system-resolvers',
+      '-r', resolverFile,
+      '-no-mhe',
+      '-stats',
+      '-stats-interval', '30',
     ], { timeout: 900000 }); // 15 min timeout
 
     try { fs.unlinkSync(targetFile); } catch {}
+    try { fs.unlinkSync(resolverFile); } catch {}
 
     console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
     console.log(`[NUCLEI-QUICK] Stderr (last 500): ${(stderr || '').slice(-500)}`);

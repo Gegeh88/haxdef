@@ -108,12 +108,16 @@ async function diagnose() {
     return;
   }
 
-  // Step 5: Run nuclei with SINGLE template, debug mode, 1 thread
-  console.log('--- STEP 5: Single Template Test (with -debug) ---');
+  // Step 5: Run nuclei with SINGLE template, debug mode, 1 thread + DNS fix
+  console.log('--- STEP 5: Single Template Test (with -debug + DNS fix) ---');
+  const resolverFile = path.join(os.tmpdir(), 'resolvers-diag.txt');
+  fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
+  console.log('  Created resolver file with public DNS servers');
+
   const outputFile = path.join(os.tmpdir(), `nuclei-diag-${Date.now()}.jsonl`);
   const templateToTest = existingTemplates[0];
   console.log(`Template: ${path.basename(templateToTest)}`);
-  console.log(`Command: nuclei -u ${TARGET} -t ${templateToTest} -debug -c 1 -rl 5 -timeout 15 --system-resolvers -je ${outputFile}`);
+  console.log(`Command: nuclei -u ${TARGET} -t ${templateToTest} -debug -c 1 -rl 5 -timeout 30 -system-resolvers -r resolvers.txt -no-mhe`);
   console.log();
 
   try {
@@ -123,9 +127,11 @@ async function diagnose() {
       '-debug',
       '-c', '1',
       '-rl', '5',
-      '-timeout', '15',
+      '-timeout', '30',
       '-duc',
-      '--system-resolvers',
+      '-system-resolvers',
+      '-r', resolverFile,
+      '-no-mhe',
       '-je', outputFile,
       '-no-color',
       '-stats',
@@ -164,9 +170,11 @@ async function diagnose() {
       ...templateArgs,
       '-c', '3',
       '-rl', '10',
-      '-timeout', '15',
+      '-timeout', '30',
       '-duc',
-      '--system-resolvers',
+      '-system-resolvers',
+      '-r', resolverFile,
+      '-no-mhe',
       '-je', outputFile2,
       '-no-color',
       '-stats',
@@ -212,11 +220,13 @@ async function diagnose() {
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-u', TARGET,
       '-t', miscDir,
-      '-c', '3',
-      '-rl', '15',
-      '-timeout', '15',
+      '-c', '5',
+      '-rl', '20',
+      '-timeout', '30',
       '-duc',
-      '--system-resolvers',
+      '-system-resolvers',
+      '-r', resolverFile,
+      '-no-mhe',
       '-je', outputFile3,
       '-no-color',
       '-stats',
