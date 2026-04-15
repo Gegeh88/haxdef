@@ -124,6 +124,20 @@ async function main() {
   // Ensure templates are ready before accepting scans
   await ensureNucleiTemplates();
 
+  // Reset any scans stuck in "running" from previous container
+  try {
+    const { data: stuck } = await supabase
+      .from('scans')
+      .update({ status: 'queued', worker_id: null })
+      .eq('status', 'running')
+      .select('id');
+    if (stuck && stuck.length > 0) {
+      console.log(`[INIT] Reset ${stuck.length} stuck scans to queued`);
+    }
+  } catch (err) {
+    console.error('[INIT] Failed to reset stuck scans:', err.message);
+  }
+
   // Run diagnostic if NUCLEI_DIAGNOSE env var is set
   if (process.env.NUCLEI_DIAGNOSE === 'true') {
     console.log('[INIT] Running Nuclei diagnostics...');
