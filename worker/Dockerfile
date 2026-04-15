@@ -1,3 +1,8 @@
+# Stage 1: Build Wapiti (needs Python 3.13)
+FROM python:3.13-slim AS wapiti-build
+RUN pip install --no-cache-dir wapiti3
+
+# Stage 2: Main worker image
 FROM node:20-slim
 
 # Install system dependencies
@@ -9,7 +14,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     ca-certificates \
     git \
+    python3 \
+    libpython3.11 \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy Python 3.13 + Wapiti from build stage
+COPY --from=wapiti-build /usr/local/lib/python3.13/ /usr/local/lib/python3.13/
+COPY --from=wapiti-build /usr/local/bin/python3.13 /usr/local/bin/python3.13
+COPY --from=wapiti-build /usr/local/lib/libpython3.13.so* /usr/local/lib/
+COPY --from=wapiti-build /usr/local/bin/wapiti /usr/local/bin/wapiti
+RUN ldconfig && chmod +x /usr/local/bin/wapiti /usr/local/bin/python3.13
 
 # Install Nuclei
 RUN NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | tr -d 'v') \
@@ -28,8 +42,7 @@ RUN SUBFINDER_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/su
 # Create non-root user
 RUN useradd -m -d /home/scanner -s /bin/bash scanner
 
-# Download Nuclei templates via git clone (most reliable in Docker)
-# This avoids DNS/API issues that nuclei -update-templates has in containers
+# Download Nuclei templates
 RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei-templates.git /home/scanner/nuclei-templates \
     && chown -R scanner:scanner /home/scanner/nuclei-templates \
     && echo "Templates downloaded:" \
@@ -40,13 +53,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY . .
-RUN chown -R scanner:scanner /app
 
-# Copy entrypoint script and fix line endings (Windows CRLF → Unix LF)
+# Copy entrypoint script and fix line endings
 COPY entrypoint.sh /app/entrypoint.sh
-RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh && chown -R scanner:scanner /app
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh \
+    && chown -R scanner:scanner /app
 
 ENV HOME=/home/scanner
 
-# Run as root initially to override /etc/resolv.conf, then drops to scanner user
 CMD ["/app/entrypoint.sh"]

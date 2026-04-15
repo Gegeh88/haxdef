@@ -5,44 +5,51 @@ const { scanPorts } = require('./steps/ports-scan');
 const { detectTech } = require('./steps/tech-detect');
 const { checkDNS } = require('./steps/dns-check');
 const { runNucleiQuick } = require('./steps/nuclei-quick');
+const { runWapitiScan } = require('./steps/wapiti-scan');
 
 async function runQuickScan(scanId, domain) {
   const allFindings = [];
 
-  // Step 1: HTTP Headers (0-15%)
+  // Step 1: HTTP Headers (0-10%)
   await updateProgress(scanId, 0, 'Checking HTTP security headers...');
   const headerFindings = await checkHeaders(domain);
   allFindings.push(...headerFindings);
-  await updateProgress(scanId, 15, 'HTTP headers check complete');
+  await updateProgress(scanId, 10, 'HTTP headers check complete');
 
-  // Step 2: SSL/TLS (15-30%)
-  await updateProgress(scanId, 16, 'Analyzing SSL/TLS certificate...');
+  // Step 2: SSL/TLS (10-20%)
+  await updateProgress(scanId, 11, 'Analyzing SSL/TLS certificate...');
   const sslFindings = await checkSSL(domain);
   allFindings.push(...sslFindings);
-  await updateProgress(scanId, 30, 'SSL/TLS analysis complete');
+  await updateProgress(scanId, 20, 'SSL/TLS analysis complete');
 
-  // Step 3: Port Scan (30-50%)
-  await updateProgress(scanId, 31, 'Scanning common ports...');
+  // Step 3: Port Scan (20-35%)
+  await updateProgress(scanId, 21, 'Scanning common ports...');
   const portFindings = await scanPorts(domain);
   allFindings.push(...portFindings);
-  await updateProgress(scanId, 50, 'Port scan complete');
+  await updateProgress(scanId, 35, 'Port scan complete');
 
-  // Step 4: Technology Detection (50-65%)
-  await updateProgress(scanId, 51, 'Detecting technologies...');
+  // Step 4: Technology Detection (35-45%)
+  await updateProgress(scanId, 36, 'Detecting technologies...');
   const techFindings = await detectTech(domain);
   allFindings.push(...techFindings);
-  await updateProgress(scanId, 65, 'Technology detection complete');
+  await updateProgress(scanId, 45, 'Technology detection complete');
 
-  // Step 5: DNS Configuration (65-80%)
-  await updateProgress(scanId, 66, 'Checking DNS configuration...');
+  // Step 5: DNS Configuration (45-55%)
+  await updateProgress(scanId, 46, 'Checking DNS configuration...');
   const dnsFindings = await checkDNS(domain);
   allFindings.push(...dnsFindings);
-  await updateProgress(scanId, 80, 'DNS check complete');
+  await updateProgress(scanId, 55, 'DNS check complete');
 
-  // Step 6: Basic Nuclei (80-100%)
-  await updateProgress(scanId, 81, 'Running basic vulnerability scan...');
+  // Step 6: Nuclei pattern scan (55-75%)
+  await updateProgress(scanId, 56, 'Running vulnerability pattern scan (Nuclei)...');
   const nucleiFindings = await runNucleiQuick(domain);
   allFindings.push(...nucleiFindings);
+  await updateProgress(scanId, 75, 'Pattern scan complete');
+
+  // Step 7: Wapiti active fuzzing (75-100%)
+  await updateProgress(scanId, 76, 'Running active vulnerability scan (XSS, SQLi, SSRF)...');
+  const wapitiFindings = await runWapitiScan(domain, 'quick');
+  allFindings.push(...wapitiFindings);
 
   // Complete
   await completeScan(scanId, allFindings);

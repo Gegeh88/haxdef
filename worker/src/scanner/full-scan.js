@@ -8,53 +8,56 @@ const { runNucleiQuick } = require('./steps/nuclei-quick');
 const { runNucleiFull } = require('./steps/nuclei-full');
 const { enumerateSubdomains } = require('./steps/subdomain-enum');
 const { scanDirectories } = require('./steps/directory-scan');
+const { runWapitiScan } = require('./steps/wapiti-scan');
 
 async function runFullScan(scanId, domain) {
   const allFindings = [];
 
-  // Steps 1-6: Same as quick scan (0-30%)
+  // Steps 1-5: Quick checks (0-20%)
   await updateProgress(scanId, 0, 'Checking HTTP security headers...');
   const headerFindings = await checkHeaders(domain);
   allFindings.push(...headerFindings);
 
-  await updateProgress(scanId, 5, 'Analyzing SSL/TLS certificate...');
+  await updateProgress(scanId, 4, 'Analyzing SSL/TLS certificate...');
   const sslFindings = await checkSSL(domain);
   allFindings.push(...sslFindings);
 
-  await updateProgress(scanId, 10, 'Scanning common ports...');
+  await updateProgress(scanId, 8, 'Scanning common ports...');
   const portFindings = await scanPorts(domain);
   allFindings.push(...portFindings);
 
-  await updateProgress(scanId, 15, 'Detecting technologies...');
+  await updateProgress(scanId, 12, 'Detecting technologies...');
   const techFindings = await detectTech(domain);
   allFindings.push(...techFindings);
 
-  await updateProgress(scanId, 20, 'Checking DNS configuration...');
+  await updateProgress(scanId, 16, 'Checking DNS configuration...');
   const dnsFindings = await checkDNS(domain);
   allFindings.push(...dnsFindings);
+  await updateProgress(scanId, 20, 'Basic checks complete');
 
-  await updateProgress(scanId, 25, 'Running basic vulnerability scan...');
-  const nucleiQuickFindings = await runNucleiQuick(domain);
-  allFindings.push(...nucleiQuickFindings);
-  await updateProgress(scanId, 30, 'Basic checks complete');
-
-  // Step 7: Subdomain enumeration (30-40%)
-  await updateProgress(scanId, 31, 'Enumerating subdomains...');
+  // Step 6: Subdomain enumeration (20-25%)
+  await updateProgress(scanId, 21, 'Enumerating subdomains...');
   const subdomainFindings = await enumerateSubdomains(domain);
   allFindings.push(...subdomainFindings);
-  await updateProgress(scanId, 40, 'Subdomain enumeration complete');
+  await updateProgress(scanId, 25, 'Subdomain enumeration complete');
 
-  // Step 8: Directory/file discovery (40-50%)
-  await updateProgress(scanId, 41, 'Scanning for hidden directories and files...');
+  // Step 7: Directory/file discovery (25-30%)
+  await updateProgress(scanId, 26, 'Scanning for hidden directories and files...');
   const dirFindings = await scanDirectories(domain);
   allFindings.push(...dirFindings);
-  await updateProgress(scanId, 50, 'Directory scan complete');
+  await updateProgress(scanId, 30, 'Directory scan complete');
 
-  // Step 9: Full Nuclei scan (50-95%)
-  await updateProgress(scanId, 51, 'Running comprehensive Nuclei scan (this may take a while)...');
+  // Step 8: Full Nuclei pattern scan (30-65%)
+  await updateProgress(scanId, 31, 'Running full Nuclei scan (known vulnerabilities)...');
   const nucleiFullFindings = await runNucleiFull(scanId, domain);
   allFindings.push(...nucleiFullFindings);
-  await updateProgress(scanId, 95, 'Nuclei scan complete');
+  await updateProgress(scanId, 65, 'Nuclei scan complete');
+
+  // Step 9: Wapiti active fuzzing — finds XSS, SQLi, SSRF, etc. (65-95%)
+  await updateProgress(scanId, 66, 'Running active vulnerability scan (XSS, SQLi, SSRF, Command Injection)...');
+  const wapitiFindings = await runWapitiScan(domain, 'full');
+  allFindings.push(...wapitiFindings);
+  await updateProgress(scanId, 95, 'Active scan complete');
 
   // Complete
   await completeScan(scanId, allFindings);
