@@ -26,29 +26,20 @@ async function runNucleiQuick(domain) {
     const resolverFile = path.join(os.tmpdir(), `resolvers-quick-${Date.now()}.txt`);
     fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
 
-    // Quick scan: use specific template dirs for speed (~500 templates instead of 5981)
-    const quickTemplateDirs = [
-      `${templateDir}/http/misconfiguration`,
-      `${templateDir}/http/technologies`,
-      `${templateDir}/http/exposed-panels`,
-      `${templateDir}/http/cves`,
-    ];
-    const templateArgs = [];
-    for (const dir of quickTemplateDirs) {
-      templateArgs.push('-t', dir);
-    }
-
+    // Quick scan: ALL templates, but only critical/high/medium severity
+    // Uses full template dir — Nuclei filters by severity internally
     const { code } = await runCommand('nuclei', [
       '-l', targetFile,
-      ...templateArgs,
+      '-t', templateDir,
       '-severity', 'critical,high,medium',
+      '-type', 'http',
       '-je', outputFile,
       '-duc',
       '-timeout', '15',
       '-retries', '1',
       '-rate-limit', '50',
-      '-bulk-size', '10',
-      '-concurrency', '10',
+      '-bulk-size', '15',
+      '-concurrency', '15',
       '-no-color',
       '-system-resolvers',
       '-r', resolverFile,
@@ -57,7 +48,7 @@ async function runNucleiQuick(domain) {
       '-nh',
       '-stats',
       '-stats-interval', '30',
-    ], { timeout: 600000, inheritStdio: true }); // 10 min max
+    ], { timeout: 900000, inheritStdio: true }); // 15 min max
 
     try { fs.unlinkSync(targetFile); } catch {}
     try { fs.unlinkSync(resolverFile); } catch {}
@@ -108,7 +99,7 @@ async function runNucleiQuick(domain) {
         type: 'nuclei-clean',
         title: 'No critical vulnerabilities found (quick scan)',
         severity: 'info',
-        description: `Nuclei quick scan completed with exit code ${code}.`,
+        description: `Nuclei quick scan completed with exit code ${code}. Scanned for critical, high, and medium severity issues.`,
         url: `https://${domain}`,
       });
     }
