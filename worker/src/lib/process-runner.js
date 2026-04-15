@@ -8,17 +8,26 @@ function runCommand(command, args = [], options = {}) {
     let killed = false;
     let resolved = false;
 
-    const proc = spawn(command, args, {
+    const spawnOptions = {
       env: { ...process.env, ...options.env },
-    });
+    };
 
-    proc.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
+    // For nuclei: use stdio inherit to avoid pipe blocking
+    if (options.inheritStdio) {
+      spawnOptions.stdio = 'inherit';
+    }
 
-    proc.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
+    const proc = spawn(command, args, spawnOptions);
+
+    if (!options.inheritStdio) {
+      proc.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      proc.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+    }
 
     proc.on('close', (code) => {
       if (!resolved) {

@@ -26,7 +26,7 @@ async function runNucleiQuick(domain) {
     const resolverFile = path.join(os.tmpdir(), `resolvers-quick-${Date.now()}.txt`);
     fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
 
-    const { stdout, stderr, code } = await runCommand('nuclei', [
+    const { code } = await runCommand('nuclei', [
       '-l', targetFile,
       '-t', templateDir,
       '-severity', 'critical,high,medium',
@@ -47,13 +47,12 @@ async function runNucleiQuick(domain) {
       '-nh',
       '-stats',
       '-stats-interval', '30',
-    ], { timeout: 900000 }); // 15 min timeout
+    ], { timeout: 900000, inheritStdio: true }); // 15 min, direct console output
 
     try { fs.unlinkSync(targetFile); } catch {}
     try { fs.unlinkSync(resolverFile); } catch {}
 
     console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
-    console.log(`[NUCLEI-QUICK] Stderr (last 500): ${(stderr || '').slice(-500)}`);
 
     // Read results from file — -je writes a JSON array, not JSON Lines
     let results = [];

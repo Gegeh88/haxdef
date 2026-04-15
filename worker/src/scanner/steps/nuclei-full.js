@@ -29,7 +29,7 @@ async function runNucleiFull(scanId, domain) {
     const resolverFile = path.join(os.tmpdir(), `resolvers-full-${Date.now()}.txt`);
     fs.writeFileSync(resolverFile, '8.8.8.8:53\n8.8.4.4:53\n1.1.1.1:53\n');
 
-    const { stdout, stderr, code } = await runCommand('nuclei', [
+    const { code } = await runCommand('nuclei', [
       '-l', targetFile,
       '-t', templateDir,
       '-severity', 'info,low,medium,high,critical',
@@ -49,14 +49,12 @@ async function runNucleiFull(scanId, domain) {
       '-no-mhe',
       '-ni',
       '-nh',
-    ], { timeout: 2400000 }); // 40 min timeout
+    ], { timeout: 2400000, inheritStdio: true }); // 40 min, direct console output
 
     try { fs.unlinkSync(targetFile); } catch {}
     try { fs.unlinkSync(resolverFile); } catch {}
 
     console.log(`[NUCLEI-FULL] Exit code: ${code}`);
-    console.log(`[NUCLEI-FULL] Stdout (last 500): ${(stdout || '').slice(-500)}`);
-    console.log(`[NUCLEI-FULL] Stderr (last 1000): ${(stderr || '').slice(-1000)}`);
 
     // Read results from file — -je writes a JSON array, not JSON Lines
     let results = [];
