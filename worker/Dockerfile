@@ -42,9 +42,9 @@ RUN npm ci --omit=dev
 COPY . .
 RUN chown -R scanner:scanner /app
 
-# Copy entrypoint script
+# Copy entrypoint script and fix line endings (Windows CRLF → Unix LF)
 COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh && chown -R scanner:scanner /app
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh && chown -R scanner:scanner /app
 
 ENV HOME=/home/scanner
 
