@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const TARGET = 'http://testphp.vulnweb.com';
+// testphp.vulnweb.com is down — use own domain for testing
+const TARGET = 'https://aidream.hu';
 const HOME = process.env.HOME || '/home/scanner';
 const TEMPLATE_DIR = `${HOME}/nuclei-templates`;
 
