@@ -42,8 +42,11 @@ RUN npm ci --omit=dev
 COPY . .
 RUN chown -R scanner:scanner /app
 
-# Run as non-root
-USER scanner
+# Copy entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh && chown -R scanner:scanner /app
+
 ENV HOME=/home/scanner
 
-CMD ["node", "src/worker.js"]
+# Run as root initially to override /etc/resolv.conf, then drops to scanner user
+CMD ["/app/entrypoint.sh"]
