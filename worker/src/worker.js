@@ -13,52 +13,39 @@ let nucleiReady = false;
 
 async function ensureNucleiTemplates() {
   console.log('[INIT] Checking Nuclei templates...');
+  const home = process.env.HOME || '/home/scanner';
+  const templateDir = `${home}/nuclei-templates`;
 
   try {
     // Check if nuclei exists
     const { stdout: version, stderr: vErr } = await runCommand('nuclei', ['-version'], { timeout: 10000 });
     console.log('[INIT] Nuclei version:', (version + vErr).trim().split('\n')[0]);
 
-    // Count templates
-    const { stdout: tl } = await runCommand('nuclei', ['-tl'], { timeout: 60000 });
-    const count = (tl || '').split('\n').filter(l => l.trim()).length;
-    console.log(`[INIT] Current template count: ${count}`);
+    // Check if template directory exists (fast file check, no nuclei -tl)
+    const { stdout: lsOut, code: lsCode } = await runCommand('ls', [templateDir], { timeout: 5000 });
+    const hasDirs = (lsOut || '').split('\n').filter(l => l.trim()).length;
+    console.log(`[INIT] Template dir contents: ${hasDirs} items (code: ${lsCode})`);
 
-    if (count < 100) {
-      console.log('[INIT] Too few templates, downloading fresh...');
-      const { stderr: updateOut } = await runCommand('nuclei', ['-update-templates'], { timeout: 300000 });
-      console.log('[INIT] Template update output:', (updateOut || '').slice(-500));
-
-      // Re-check
-      const { stdout: tl2 } = await runCommand('nuclei', ['-tl'], { timeout: 60000 });
-      const count2 = (tl2 || '').split('\n').filter(l => l.trim()).length;
-      console.log(`[INIT] Template count after update: ${count2}`);
-
-      if (count2 < 100) {
-        console.error('[INIT] WARNING: Still very few templates. Nuclei scans may not find vulnerabilities.');
-        // Try manual git clone as fallback
-        console.log('[INIT] Trying manual template download via git...');
-        const home = process.env.HOME || '/home/scanner';
-        const { stderr: gitErr, code: gitCode } = await runCommand('git', [
-          'clone', '--depth', '1',
-          'https://github.com/projectdiscovery/nuclei-templates.git',
-          `${home}/nuclei-templates`
-        ], { timeout: 300000 });
-        console.log(`[INIT] Git clone exit code: ${gitCode}, stderr: ${(gitErr || '').slice(-300)}`);
-
-        // Final check
-        const { stdout: tl3 } = await runCommand('nuclei', ['-tl'], { timeout: 60000 });
-        const count3 = (tl3 || '').split('\n').filter(l => l.trim()).length;
-        console.log(`[INIT] Final template count: ${count3}`);
-      }
+    if (lsCode !== 0 || hasDirs < 5) {
+      console.log('[INIT] Templates missing, downloading via git clone...');
+      const { code: gitCode } = await runCommand('git', [
+        'clone', '--depth', '1',
+        'https://github.com/projectdiscovery/nuclei-templates.git',
+        templateDir
+      ], { timeout: 300000 });
+      console.log(`[INIT] Git clone exit code: ${gitCode}`);
     }
+
+    // Count yaml files (fast)
+    const { stdout: countOut } = await runCommand('find', [templateDir, '-name', '*.yaml', '-type', 'f'], { timeout: 30000 });
+    const yamlCount = (countOut || '').split('\n').filter(l => l.trim()).length;
+    console.log(`[INIT] YAML templates found: ${yamlCount}`);
 
     nucleiReady = true;
     console.log('[INIT] Nuclei ready.');
   } catch (err) {
     console.error('[INIT] Nuclei setup error:', err.message);
-    console.log('[INIT] Scans will proceed but Nuclei steps may be skipped.');
-    nucleiReady = true; // Still allow scans, nuclei steps will handle errors themselves
+    nucleiReady = true; // Still allow scans
   }
 }
 
