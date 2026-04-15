@@ -1,5 +1,6 @@
 const { runCommand } = require('../../lib/process-runner');
 const { updateProgress } = require('../../lib/progress');
+const { detectProtocols } = require('../../lib/detect-protocol');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -18,9 +19,11 @@ async function runNucleiFull(scanId, domain) {
     const home = process.env.HOME || '/home/scanner';
     const templateDir = `${home}/nuclei-templates`;
 
-    // Create a target list with both http and https
+    // Detect which protocols work (avoid wasting time on dead HTTPS)
+    const urls = await detectProtocols(domain);
     const targetFile = path.join(os.tmpdir(), `nuclei-targets-${scanId}.txt`);
-    fs.writeFileSync(targetFile, `https://${domain}\nhttp://${domain}\n`);
+    fs.writeFileSync(targetFile, urls.join('\n') + '\n');
+    console.log(`[NUCLEI-FULL] Targets: ${urls.join(', ')}`);
 
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-l', targetFile,

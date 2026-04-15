@@ -1,4 +1,5 @@
 const { runCommand } = require('../../lib/process-runner');
+const { detectProtocols } = require('../../lib/detect-protocol');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -15,9 +16,11 @@ async function runNucleiQuick(domain) {
     const home = process.env.HOME || '/home/scanner';
     const templateDir = `${home}/nuclei-templates`;
 
-    // Create a target list with both http and https
+    // Detect which protocols work
+    const urls = await detectProtocols(domain);
     const targetFile = path.join(os.tmpdir(), `nuclei-qtargets-${Date.now()}.txt`);
-    fs.writeFileSync(targetFile, `https://${domain}\nhttp://${domain}\n`);
+    fs.writeFileSync(targetFile, urls.join('\n') + '\n');
+    console.log(`[NUCLEI-QUICK] Targets: ${urls.join(', ')}`);
 
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-l', targetFile,
