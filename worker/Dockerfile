@@ -25,32 +25,24 @@ RUN SUBFINDER_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/su
     && rm /tmp/subfinder.zip \
     && chmod +x /usr/local/bin/subfinder
 
-# Create non-root user with proper home directory
+# Create non-root user
 RUN useradd -m -d /home/scanner -s /bin/bash scanner
 
-# Download Nuclei templates as scanner user with explicit HOME
-USER scanner
-ENV HOME=/home/scanner
-RUN nuclei -update-templates 2>&1 | tail -5 \
-    && echo "=== Template directory ===" \
-    && ls -la /home/scanner/nuclei-templates/ 2>/dev/null || ls -la /home/scanner/.local/nuclei/templates/ 2>/dev/null || echo "Checking .nuclei-templates" \
-    && ls /home/scanner/.nuclei-templates/ 2>/dev/null || echo "No templates in .nuclei-templates" \
-    && echo "=== Template count ===" \
-    && nuclei -tl 2>/dev/null | wc -l
+# Download Nuclei templates via git clone (most reliable in Docker)
+# This avoids DNS/API issues that nuclei -update-templates has in containers
+RUN git clone --depth 1 https://github.com/projectdiscovery/nuclei-templates.git /home/scanner/nuclei-templates \
+    && chown -R scanner:scanner /home/scanner/nuclei-templates \
+    && echo "Templates downloaded:" \
+    && find /home/scanner/nuclei-templates -name "*.yaml" | wc -l
 
-# Switch back to root to set up the app
-USER root
+# Set up app
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci --omit=dev
-
 COPY . .
-
-# Make app files readable by scanner
 RUN chown -R scanner:scanner /app
 
-# Run as non-root for security
+# Run as non-root
 USER scanner
 ENV HOME=/home/scanner
 

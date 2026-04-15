@@ -12,12 +12,16 @@ async function runNucleiQuick(domain) {
     console.log('[NUCLEI-QUICK] Version:', (versionOut + versionErr).trim().split('\n')[0]);
     if (checkCode !== 0) throw new Error('nuclei not found');
 
-    // Write results to file
+    const home = process.env.HOME || '/home/scanner';
+    const templateDir = `${home}/nuclei-templates`;
+
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-u', `https://${domain}`,
+      '-t', templateDir,
       '-severity', 'critical,high,medium',
       '-type', 'http',
       '-je', outputFile,
+      '-duc',
       '-timeout', '10',
       '-retries', '1',
       '-rate-limit', '50',

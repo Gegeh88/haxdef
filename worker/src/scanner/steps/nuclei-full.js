@@ -15,18 +15,24 @@ async function runNucleiFull(scanId, domain) {
 
     await updateProgress(scanId, 52, 'Running full Nuclei scan (this takes 15-40 minutes)...');
 
-    // Write results to a file instead of relying on stdout parsing
+    const home = process.env.HOME || '/home/scanner';
+    const templateDir = `${home}/nuclei-templates`;
+
     const { stdout, stderr, code } = await runCommand('nuclei', [
       '-u', `https://${domain}`,
+      '-t', templateDir,
       '-severity', 'info,low,medium,high,critical',
       '-type', 'http',
       '-je', outputFile,
+      '-duc',
       '-timeout', '15',
       '-retries', '2',
       '-rate-limit', '100',
       '-bulk-size', '50',
       '-concurrency', '25',
       '-no-color',
+      '-stats',
+      '-stats-interval', '30',
     ], { timeout: 2400000 }); // 40 min timeout
 
     console.log(`[NUCLEI-FULL] Exit code: ${code}`);
