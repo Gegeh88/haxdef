@@ -15,21 +15,27 @@ async function runNucleiQuick(domain) {
     const home = process.env.HOME || '/home/scanner';
     const templateDir = `${home}/nuclei-templates`;
 
+    // Create a target list with both http and https
+    const targetFile = path.join(os.tmpdir(), `nuclei-qtargets-${Date.now()}.txt`);
+    fs.writeFileSync(targetFile, `https://${domain}\nhttp://${domain}\n`);
+
     const { stdout, stderr, code } = await runCommand('nuclei', [
-      '-u', `https://${domain}`,
+      '-l', targetFile,
       '-t', templateDir,
       '-severity', 'critical,high,medium',
       '-type', 'http',
       '-je', outputFile,
       '-duc',
-      '-timeout', '10',
-      '-retries', '1',
-      '-rate-limit', '50',
+      '-timeout', '20',
+      '-retries', '2',
+      '-rate-limit', '100',
       '-bulk-size', '25',
-      '-concurrency', '10',
+      '-concurrency', '15',
       '-no-color',
       '-exclude-type', 'ssl',
     ], { timeout: 900000 }); // 15 min timeout
+
+    try { fs.unlinkSync(targetFile); } catch {}
 
     console.log(`[NUCLEI-QUICK] Exit code: ${code}`);
     console.log(`[NUCLEI-QUICK] Stderr (last 500): ${(stderr || '').slice(-500)}`);

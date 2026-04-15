@@ -18,22 +18,28 @@ async function runNucleiFull(scanId, domain) {
     const home = process.env.HOME || '/home/scanner';
     const templateDir = `${home}/nuclei-templates`;
 
+    // Create a target list with both http and https
+    const targetFile = path.join(os.tmpdir(), `nuclei-targets-${scanId}.txt`);
+    fs.writeFileSync(targetFile, `https://${domain}\nhttp://${domain}\n`);
+
     const { stdout, stderr, code } = await runCommand('nuclei', [
-      '-u', `https://${domain}`,
+      '-l', targetFile,
       '-t', templateDir,
       '-severity', 'info,low,medium,high,critical',
       '-type', 'http',
       '-je', outputFile,
       '-duc',
-      '-timeout', '15',
-      '-retries', '2',
-      '-rate-limit', '100',
-      '-bulk-size', '50',
+      '-timeout', '30',
+      '-retries', '3',
+      '-rate-limit', '150',
+      '-bulk-size', '25',
       '-concurrency', '25',
       '-no-color',
       '-stats',
-      '-stats-interval', '30',
+      '-stats-interval', '60',
     ], { timeout: 2400000 }); // 40 min timeout
+
+    try { fs.unlinkSync(targetFile); } catch {}
 
     console.log(`[NUCLEI-FULL] Exit code: ${code}`);
     console.log(`[NUCLEI-FULL] Stdout (last 500): ${(stdout || '').slice(-500)}`);
