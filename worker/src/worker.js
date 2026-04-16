@@ -138,6 +138,18 @@ async function main() {
     console.error('[INIT] Failed to reset stuck scans:', err.message);
   }
 
+  // Run wapiti target diagnostic — focused 3min test on demo.testfire.net
+  if (process.env.DIAGNOSE_WAPITI_TARGET === 'true') {
+    console.log('[INIT] Running Wapiti target diagnostic...');
+    try {
+      const { main: diagWap } = require('./diagnose-wapiti-target');
+      await diagWap();
+    } catch (err) {
+      console.error('[INIT] Wapiti diagnostic error:', err.message);
+    }
+    console.log('[INIT] Wapiti diagnostic done.');
+  }
+
   // Run connection diagnostic if env var is set (fast, ~1 minute)
   if (process.env.DIAGNOSE_CONNECTIONS === 'true') {
     console.log('[INIT] Running connection diagnostics...');
