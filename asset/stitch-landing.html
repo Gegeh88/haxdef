@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html lang="hu"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#001f25",
+                        "surface-container": "#eceef0",
+                        "primary-container": "#00323a",
+                        "outline-variant": "#c4c6d0",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e6e8ea",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "secondary-fixed-dim": "#aec6ff",
+                        "on-surface": "#191c1e",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#001b21",
+                        "tertiary-container": "#c9a900",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#aec6ff",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-secondary-container": "#395284",
+                        "on-primary-fixed-variant": "#004e5a",
+                        "tertiary-fixed-dim": "#e9c400",
+                        "on-primary-container": "#00a3b8",
+                        "on-tertiary-fixed": "#221b00",
+                        "on-background": "#191c1e",
+                        "on-surface-variant": "#44474f",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "inverse-primary": "#43d8f2",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed-variant": "#2c4677",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#4c3f00",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "secondary": "#455e90",
+                        "surface-tint": "#006877",
+                        "outline": "#747780",
+                        "tertiary": "#705d00",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-fixed": "#a2eeff",
+                        "on-tertiary-fixed-variant": "#544600",
+                        "surface-container-low": "#f2f4f6",
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed": "#ffe16d",
+                        "primary-fixed-dim": "#43d8f2",
+                        "on-secondary-fixed": "#001a42"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .aura-gradient {
+            background: linear-gradient(135deg, #001b21 0%, #00a3b8 100%);
+        }
+        .glass-nav {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .editorial-shadow {
+            box-shadow: 0px 4px 20px rgba(0, 27, 33, 0.04), 0px 12px 40px rgba(0, 27, 33, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-slate-50/60 dark:bg-slate-950/60 backdrop-blur-xl shadow-sm dark:shadow-none">
+<div class="max-w-7xl mx-auto flex justify-between items-center px-8 py-4">
+<div class="flex items-center gap-2">
+<span class="text-2xl font-black tracking-tighter text-cyan-950 dark:text-white font-headline">AuraDef</span>
+</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-cyan-600 dark:text-cyan-300 border-b-2 border-cyan-600 dark:border-cyan-300 pb-1 font-manrope text-sm font-semibold tracking-tight" href="#">Kezdőlap</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-cyan-900 dark:hover:text-cyan-100 transition-all duration-300 font-manrope text-sm font-semibold tracking-tight" href="#">Erőforrások</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-cyan-900 dark:hover:text-cyan-100 transition-all duration-300 font-manrope text-sm font-semibold tracking-tight" href="#">Árazás</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-cyan-900 dark:hover:text-cyan-100 transition-all duration-300 font-manrope text-sm font-semibold tracking-tight" href="#">Rólunk</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-600 font-semibold text-sm hover:text-primary transition-colors">Bejelentkezés</button>
+<button class="bg-tertiary-fixed text-on-tertiary-fixed px-6 py-2.5 rounded-full font-bold text-sm hover:opacity-90 transition-all scale-95 active:scale-90">Ingyenes Szkennelés</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="relative pt-32 pb-24 overflow-hidden">
+<div class="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-7 z-10">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-fixed/20 border border-on-primary-container/10 mb-6">
+<span class="w-2 h-2 rounded-full bg-on-primary-container animate-pulse"></span>
+<span class="text-xs font-bold tracking-widest uppercase font-label text-on-primary-container">Cybersecurity for SMEs</span>
+</div>
+<h1 class="text-6xl md:text-7xl font-extrabold font-headline text-on-surface tracking-tighter leading-[1.1] mb-6">
+                    Weboldalad biztonsága a mi feladatunk.
+                </h1>
+<p class="text-xl text-on-surface-variant leading-relaxed mb-10 max-w-2xl">
+                    Automatizált sérülékenységvizsgálat kis- és középvállalkozásoknak. Fedezd fel a sebezhetőségeket, mielőtt a támadók tennék.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="aura-gradient text-white px-8 py-4 rounded-full font-bold text-lg editorial-shadow hover:scale-105 transition-transform">
+                        Kezdd el ingyen
+                    </button>
+<button class="flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg text-primary border border-outline-variant/30 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="play_circle">play_circle</span>
+                        Hogyan működik?
+                    </button>
+</div>
+</div>
+<div class="lg:col-span-5 relative">
+<div class="relative w-full aspect-square bg-gradient-to-tr from-primary-fixed/30 to-transparent rounded-[2rem] flex items-center justify-center p-8 overflow-hidden">
+<img class="w-full h-auto z-10 editorial-shadow rounded-2xl" data-alt="Futuristic cyber security shield emblem with neon cyan glow and intricate circuit board patterns in a clean editorial setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJymLG4WFUlMoudIe9KRXMG4LCIpWCep8jSZ6YNVR_NFtRtzcK8_Oi3hQB7Sck295h8SSA71kKS93hzTVQgPHByO5BGTn4dmRaQmXLcW6xZAgGVC4KYuKs5TaZ2idnZI0spuK-xHDTbC84QD8NKBzbR02Ety8cESWslj_QQfm34B28R3XJLfGgbhIKvZaLc-oC_6-MOtKNuhoCol6VnlW83yCP3jHkxK87k7nLU4AUYen5ZmzcxBhWLCSSw3mVrnXkUS4UjLRT8pla"/>
+<div class="absolute -top-10 -right-10 w-40 h-40 bg-tertiary-fixed rounded-full blur-3xl opacity-40"></div>
+<div class="absolute -bottom-10 -left-10 w-64 h-64 bg-on-primary-container rounded-full blur-3xl opacity-20"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Section -->
+<section class="py-24 bg-surface-container-low">
+<div class="max-w-7xl mx-auto px-8">
+<div class="mb-16 text-center max-w-3xl mx-auto">
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-on-surface mb-4">Miért veszélyeztetettek a KKV-k?</h2>
+<p class="text-on-surface-variant text-lg">A kiberbűnözők nem csak a multi-cégeket támadják. A kisebb vállalkozások gyakran könnyebb célpontot jelentenek.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-surface-container-lowest p-10 rounded-2xl border border-outline-variant/10 editorial-shadow text-center">
+<div class="text-6xl font-black text-on-primary-container font-headline mb-4 tracking-tighter">43%</div>
+<p class="text-on-surface-variant font-medium">A kibertámadások 43%-a kisvállalkozásokat érint.</p>
+</div>
+<div class="bg-surface-container-lowest p-10 rounded-2xl border border-outline-variant/10 editorial-shadow text-center">
+<div class="text-6xl font-black text-on-primary-container font-headline mb-4 tracking-tighter">60%</div>
+<p class="text-on-surface-variant font-medium">A feltört kisvállalkozások 60%-a fél éven belül csődbe megy.</p>
+</div>
+<div class="bg-surface-container-lowest p-10 rounded-2xl border border-outline-variant/10 editorial-shadow text-center">
+<div class="text-6xl font-black text-on-primary-container font-headline mb-4 tracking-tighter">3.5M Ft</div>
+<p class="text-on-surface-variant font-medium">Egy átlagos adatvédelmi incidens költsége egy hazai KKV-nál.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Solution Section -->
+<section class="py-32">
+<div class="max-w-7xl mx-auto px-8">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+<div class="relative">
+<img class="rounded-3xl editorial-shadow border border-outline-variant/10" data-alt="High-end dashboard UI showing vulnerability scan results with clean charts and security score indicators in a light mode aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAt_5lYnw7bxTojYSIuxrU3mvK9aCl9xaiLIZVIehvns2tYGGskQekUbpECbJvWy_vFZlU_CocqVtnuwAzaJFNDdpziqNGl3Cf99E8eRDL5t7WTY55hI4AatQl7KGNj08g-Gv_oa37EWspceM0zZNX-333FjPis9nZcePYzHV0c6_y4TBwiVS5nGh8iCjf9ByGdd2Eq8W1bOZZvQTpdZgCiyV1np9E38IOY4RK8gcNZKQbgu8Ye-5dfILmG_ltDgAm7xYFFAmmoBz6H"/>
+<div class="absolute -bottom-8 -right-8 p-6 bg-tertiary-fixed rounded-2xl editorial-shadow hidden md:block">
+<div class="flex items-center gap-4">
+<div class="p-3 bg-on-tertiary-fixed rounded-full text-tertiary-fixed">
+<span class="material-symbols-outlined" data-icon="security" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<div class="text-sm font-bold text-on-tertiary-fixed">98.5% Biztonság</div>
+<div class="text-xs text-on-tertiary-fixed/70">Aktuális védelem szintje</div>
+</div>
+</div>
+</div>
+</div>
+<div>
+<h2 class="text-4xl md:text-5xl font-extrabold font-headline tracking-tighter text-on-surface mb-8">Megoldás: AuraDEF: Az automatizált védelem</h2>
+<div class="space-y-8">
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-14 h-14 bg-primary-fixed/30 rounded-xl flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" data-icon="search_check" style="font-variation-settings: 'FILL' 1;">search_check</span>
+</div>
+<div>
+<h3 class="text-xl font-bold font-headline mb-2">Deep Scan technológia</h3>
+<p class="text-on-surface-variant leading-relaxed">Több mint 10.000 ismert sebezhetőséget vizsgálunk, beleértve az SQL injection-t és az XSS támadásokat.</p>
+</div>
+</div>
+<div class="flex gap-6">
+<div class="flex-shrink-0 w-14 h-14 bg-primary-fixed/30 rounded-xl flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" data-icon="smart_toy" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div>
+<h3 class="text-xl font-bold font-headline mb-2">AI-alapú jelentések</h3>
+<p class="text-on-surface-variant leading-relaxed">Nem csak listázzuk a hibákat, hanem érthető, magyar nyelvű javítási útmutatót is adunk melléjük.</p>
+</div>
+</div>
+<div class="pt-4">
+<button class="bg-primary text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-all">Szkennelés indítása most</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="py-24 bg-surface-container">
+<div class="max-w-7xl mx-auto px-8">
+<div class="mb-16">
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-on-surface mb-4">Minden, ami a védelemhez kell</h2>
+<p class="text-on-surface-variant text-lg max-w-2xl">Integrált megoldások a teljes digitális biztonsághoz, fejlesztők és cégvezetők számára egyaránt.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 h-auto md:h-[600px]">
+<div class="md:col-span-8 bg-surface-container-lowest p-8 rounded-3xl editorial-shadow relative overflow-hidden group">
+<div class="relative z-10 h-full flex flex-col justify-between">
+<div>
+<span class="material-symbols-outlined text-on-primary-container text-4xl mb-4" data-icon="verified">verified</span>
+<h3 class="text-2xl font-extrabold font-headline mb-4">Tulajdonjog igazolás</h3>
+<p class="text-on-surface-variant max-w-sm">Biztonságos DNS vagy fájl alapú hitelesítés, hogy csak a saját oldalad szkennelhesd.</p>
+</div>
+<div class="mt-8">
+<img class="w-64 rounded-xl editorial-shadow" data-alt="Elegant close-up of a digital security certificate with golden aura highlights and clean professional typography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOwDnkL8_66Tsul3N-eOKmUrP_Xov9cWPfwUt3c_FIIYgvd9R5B_CNp91osSsWOOAy3mCe1G_951nlNF1NJSXHWJ0MqxHJVo8pAqVwYz2fVd-nDb7JFhnByHMYowfvtsGHv562hRCgBmDe7rhacthe6Vqw5r7m83NMT_yw8NC0MO-DSRqJ0ebzCMTaxSvH-9q6Tv3mriHg43yoLt3bZb10wZZytsy1QdyxC8_OsnB04Qa7G5Put9K-cX8zQiLrwF_uOvzmOTs07mRm"/>
+</div>
+</div>
+<div class="absolute right-0 bottom-0 w-64 h-64 bg-primary-fixed/10 rounded-full blur-3xl"></div>
+</div>
+<div class="md:col-span-4 bg-primary p-8 rounded-3xl editorial-shadow text-white">
+<span class="material-symbols-outlined text-on-primary-container text-4xl mb-4" data-icon="radar">radar</span>
+<h3 class="text-2xl font-extrabold font-headline mb-4 text-primary-fixed">Deep Scan</h3>
+<p class="text-on-primary/70 leading-relaxed">Mélyreható vizsgálat minden rétegben, a szervertől a kliensoldali scriptekig.</p>
+</div>
+<div class="md:col-span-4 bg-tertiary-fixed p-8 rounded-3xl editorial-shadow">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-4xl mb-4" data-icon="description" style="font-variation-settings: 'FILL' 1;">description</span>
+<h3 class="text-2xl font-extrabold font-headline mb-4 text-on-tertiary-fixed">Érthető jelentések</h3>
+<p class="text-on-tertiary-fixed/80 leading-relaxed">Nulla technikai zsargon, 100% cselekvésre alkalmas tanács a csapatodnak.</p>
+</div>
+<div class="md:col-span-8 bg-surface-container-lowest p-8 rounded-3xl editorial-shadow flex flex-col md:flex-row items-center gap-8">
+<div class="flex-1">
+<span class="material-symbols-outlined text-on-primary-container text-4xl mb-4" data-icon="update">update</span>
+<h3 class="text-2xl font-extrabold font-headline mb-4">Folyamatos védelem</h3>
+<p class="text-on-surface-variant leading-relaxed">Napi, heti vagy havi automatikus szkennelések, hogy ne érjen meglepetés egy frissítés után.</p>
+</div>
+<div class="w-full md:w-48 h-32 bg-surface-container rounded-2xl flex items-center justify-center">
+<span class="material-symbols-outlined text-6xl text-on-surface-variant/20" data-icon="shield_with_heart" style="font-variation-settings: 'FILL' 1;">shield_with_heart</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Steps Section -->
+<section class="py-32">
+<div class="max-w-7xl mx-auto px-8">
+<h2 class="text-4xl font-extrabold font-headline tracking-tighter text-center mb-20">3 lépésben a biztonságig</h2>
+<div class="relative">
+<div class="hidden lg:block absolute top-1/2 left-0 w-full h-0.5 bg-outline-variant/30 -translate-y-1/2"></div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+<div class="relative bg-surface p-8 text-center">
+<div class="w-16 h-16 bg-primary-container text-on-primary-fixed-variant rounded-full flex items-center justify-center font-black text-2xl mx-auto mb-8 relative z-10 editorial-shadow">1</div>
+<h3 class="text-xl font-bold font-headline mb-4">Regisztráció</h3>
+<p class="text-on-surface-variant">Add meg az oldalad URL címét és igazold a tulajdonjogod pár kattintással.</p>
+</div>
+<div class="relative bg-surface p-8 text-center">
+<div class="w-16 h-16 bg-primary-container text-on-primary-fixed-variant rounded-full flex items-center justify-center font-black text-2xl mx-auto mb-8 relative z-10 editorial-shadow">2</div>
+<h3 class="text-xl font-bold font-headline mb-4">Szkennelés</h3>
+<p class="text-on-surface-variant">Indítsd el az automatizált Deep Scan vizsgálatot, ami kb. 15-20 percet vesz igénybe.</p>
+</div>
+<div class="relative bg-surface p-8 text-center">
+<div class="w-16 h-16 bg-primary-container text-on-primary-fixed-variant rounded-full flex items-center justify-center font-black text-2xl mx-auto mb-8 relative z-10 editorial-shadow">3</div>
+<h3 class="text-xl font-bold font-headline mb-4">Javítás</h3>
+<p class="text-on-surface-variant">Töltsd le a magyar nyelvű jelentést és kövesd az egyszerű javítási lépéseket.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Pricing Section -->
+<section class="py-32 bg-primary-container text-white">
+<div class="max-w-7xl mx-auto px-8">
+<div class="text-center mb-16">
+<h2 class="text-4xl md:text-5xl font-extrabold font-headline tracking-tight mb-4">Egyszerű, átlátható árazás</h2>
+<p class="text-on-primary-container/80 text-lg">Válaszd a vállalkozásod méretéhez leginkább illő csomagot.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Free -->
+<div class="bg-primary p-10 rounded-3xl border border-outline-variant/10 flex flex-col h-full">
+<h3 class="text-xl font-bold mb-2">Ingyenes</h3>
+<div class="text-4xl font-black font-headline mb-6">0 Ft<span class="text-sm font-normal text-on-primary/60">/hó</span></div>
+<ul class="space-y-4 mb-10 flex-grow">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> 1 weboldal</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> Havi 1 alap szkennelés</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> Alap jelentés</li>
+</ul>
+<button class="w-full py-4 rounded-full border border-outline-variant/30 font-bold hover:bg-white/5 transition-colors">Regisztráció</button>
+</div>
+<!-- Pro -->
+<div class="bg-surface-container-lowest p-10 rounded-3xl editorial-shadow flex flex-col h-full text-on-surface relative transform md:scale-105">
+<div class="absolute top-0 right-10 -translate-y-1/2 bg-tertiary-fixed text-on-tertiary-fixed px-4 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Legnépszerűbb</div>
+<h3 class="text-xl font-bold mb-2">Pro</h3>
+<div class="text-4xl font-black font-headline mb-6 text-on-primary-container">14.900 Ft<span class="text-sm font-normal text-on-surface-variant">/hó</span></div>
+<ul class="space-y-4 mb-10 flex-grow">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-on-primary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> 5 weboldal</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-on-primary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Heti Deep Scan</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-on-primary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Részletes magyar AI jelentés</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-on-primary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> E-mail riasztások</li>
+</ul>
+<button class="w-full py-4 rounded-full aura-gradient text-white font-bold editorial-shadow">Kezdd el most</button>
+</div>
+<!-- Enterprise -->
+<div class="bg-primary p-10 rounded-3xl border border-outline-variant/10 flex flex-col h-full">
+<h3 class="text-xl font-bold mb-2">Enterprise</h3>
+<div class="text-4xl font-black font-headline mb-6">Egyedi ár</div>
+<ul class="space-y-4 mb-10 flex-grow">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> Korlátlan weboldal</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> API hozzáférés</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed" data-icon="check_circle">check_circle</span> Dedikált szakértői támogatás</li>
+</ul>
+<button class="w-full py-4 rounded-full border border-outline-variant/30 font-bold hover:bg-white/5 transition-colors">Kapcsolat</button>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="py-32">
+<div class="max-w-3xl mx-auto px-8">
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-center mb-16">Gyakori kérdések</h2>
+<div class="space-y-4">
+<div class="group bg-surface-container-low rounded-2xl p-6 cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-lg font-bold">Milyen gyakran érdemes szkennelni az oldalt?</h4>
+<span class="material-symbols-outlined transition-transform group-hover:rotate-180" data-icon="expand_more">expand_more</span>
+</div>
+<div class="mt-4 text-on-surface-variant hidden group-hover:block transition-all">
+                        Javasoljuk a legalább heti egy mélyvizsgálatot, illetve minden nagyobb kódmódosítás vagy plugin frissítés utáni azonnali ellenőrzést.
+                    </div>
+</div>
+<div class="group bg-surface-container-low rounded-2xl p-6 cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-lg font-bold">Lassíthatja a szkennelés a weboldalam működését?</h4>
+<span class="material-symbols-outlined transition-transform group-hover:rotate-180" data-icon="expand_more">expand_more</span>
+</div>
+<div class="mt-4 text-on-surface-variant hidden group-hover:block transition-all">
+                        Nem. Az AuraDef intelligens terheléselosztót használ, amely figyeli a szervered válaszidejét, és úgy ütemezi a kéréseket, hogy az ne zavarja a látogatóidat.
+                    </div>
+</div>
+<div class="group bg-surface-container-low rounded-2xl p-6 cursor-pointer">
+<div class="flex justify-between items-center">
+<h4 class="text-lg font-bold">Kell-e bármit telepítenem a szerveremre?</h4>
+<span class="material-symbols-outlined transition-transform group-hover:rotate-180" data-icon="expand_more">expand_more</span>
+</div>
+<div class="mt-4 text-on-surface-variant hidden group-hover:block transition-all">
+                        Semmit. A vizsgálat külső nézetből történik, pont úgy, ahogy egy támadó látná az oldaladat. Csak a tulajdonjogot kell igazolnod.
+                    </div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-slate-100 dark:bg-slate-900 w-full py-16">
+<div class="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-4 gap-12">
+<div class="col-span-1 md:col-span-1">
+<div class="text-xl font-bold text-cyan-950 dark:text-white mb-6 font-headline">AuraDef</div>
+<p class="text-slate-500 dark:text-slate-400 font-inter text-sm leading-relaxed mb-6">
+                    A modern KKV-k digitális védőbástyája. Professzionális biztonság, mindenki számára elérhetően.
+                </p>
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary cursor-pointer hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="link">link</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary cursor-pointer hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="share">share</span>
+</div>
+</div>
+</div>
+<div>
+<h5 class="font-bold mb-6 text-cyan-950 dark:text-white">Termék</h5>
+<ul class="space-y-4">
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Funkciók</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Árazás</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Dokumentáció</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold mb-6 text-cyan-950 dark:text-white">Vállalat</h5>
+<ul class="space-y-4">
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Rólunk</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Blog</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Kapcsolat</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-bold mb-6 text-cyan-950 dark:text-white">Jogi nyilatkozat</h5>
+<ul class="space-y-4">
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Adatvédelem</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">ÁSZF</a></li>
+<li><a class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 transition-colors text-sm" href="#">Cookie szabályzat</a></li>
+</ul>
+</div>
+</div>
+<div class="max-w-7xl mx-auto px-8 mt-16 pt-8 border-t border-outline-variant/10 text-center">
+<p class="text-slate-400 text-xs font-inter uppercase tracking-widest">© 2024 AuraDef Cybersecurity. Minden jog fenntartva.</p>
+</div>
+</footer>
+</body></html>
