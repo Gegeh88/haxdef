@@ -9,9 +9,9 @@ async function runWapitiScan(domain, scanType = 'quick') {
   const outputFile = path.join(os.tmpdir(), `wapiti-${Date.now()}.json`);
 
   const isQuick = scanType === 'quick';
-  const maxScanTime = isQuick ? 300 : 900;   // 5 min quick, 15 min full
-  const maxAttackTime = isQuick ? 60 : 180;   // 1 min / 3 min per module
-  const crawlDepth = isQuick ? 3 : 10;
+  const maxScanTime = isQuick ? 300 : 1500;  // 5 min quick, 25 min full
+  const maxAttackTime = isQuick ? 60 : 240;  // 1 min / 4 min per module
+  const crawlDepth = isQuick ? 3 : 8;        // limit depth to avoid auth-loop infinite crawling
   const modules = isQuick
     ? 'xss,sql,exec,ssrf,redirect,http_headers,csp,cookieflags'
     : 'xss,permanentxss,sql,timesql,ssrf,exec,file,redirect,crlf,xxe,log4shell,http_headers,csp,cookieflags,ssl,https_redirect,information_disclosure';
@@ -47,7 +47,7 @@ async function runWapitiScan(domain, scanType = 'quick') {
       '--flush-session',
       '--no-bugreport',
       '--verify-ssl', '0',
-    ], { timeout: (maxScanTime + 60) * 1000, inheritStdio: true });
+    ], { timeout: (maxScanTime + 300) * 1000, inheritStdio: true }); // 5 min buffer for Wapiti to write JSON
 
     console.log(`[WAPITI] Exit code: ${code}`);
 
@@ -148,18 +148,52 @@ async function runWapitiScan(domain, scanType = 'quick') {
 
   } catch (err) {
     console.error('[WAPITI] Error:', err.message);
+
+    // On timeout, try to recover partial results from the JSON file
+    if (err.message.includes('timed out') && fs.existsSync(outputFile)) {
+      console.log('[WAPITI] Timeout — attempting partial recovery...');
+      try {
+        const content = fs.readFileSync(outputFile, 'utf8').trim();
+        if (content.length > 10) {
+          const report = JSON.parse(content);
+          if (report.vulnerabilities) {
+            for (const [vulnType, vulnList] of Object.entries(report.vulnerabilities)) {
+              if (!Array.isArray(vulnList)) continue;
+              for (const vuln of vulnList) {
+                findings.push({
+                  type: 'wapiti',
+                  title: `${vulnType}${vuln.parameter ? ` (${vuln.parameter})` : ''}`,
+                  severity: vuln.level >= 3 ? 'high' : vuln.level === 2 ? 'medium' : 'low',
+                  description: vuln.info || `${vulnType} at ${vuln.path}`,
+                  evidence: vuln.curl_command || '',
+                  url: vuln.path || `https://${domain}`,
+                  module: vuln.module,
+                  parameter: vuln.parameter,
+                });
+              }
+            }
+            console.log(`[WAPITI] Recovered ${findings.length} partial findings`);
+          }
+        }
+      } catch (readErr) {
+        console.error('[WAPITI] Partial recovery failed:', readErr.message);
+      }
+    }
+
     try { if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile); } catch {}
 
-    if (err.message.includes('not found') || err.message.includes('ENOENT')) {
-      console.log('[WAPITI] Wapiti not installed, skipping.');
-    } else {
-      findings.push({
-        type: 'wapiti-error',
-        title: 'Wapiti scan error',
-        severity: 'info',
-        description: `Active vulnerability scan error: ${err.message}`,
-        url: `https://${domain}`,
-      });
+    if (findings.length === 0) {
+      if (err.message.includes('not found') || err.message.includes('ENOENT')) {
+        console.log('[WAPITI] Wapiti not installed, skipping.');
+      } else {
+        findings.push({
+          type: 'wapiti-error',
+          title: 'Wapiti scan error',
+          severity: 'info',
+          description: `Active vulnerability scan error: ${err.message}`,
+          url: `https://${domain}`,
+        });
+      }
     }
   }
 
