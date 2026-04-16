@@ -138,7 +138,19 @@ async function main() {
     console.error('[INIT] Failed to reset stuck scans:', err.message);
   }
 
-  // Run diagnostic if NUCLEI_DIAGNOSE env var is set
+  // Run connection diagnostic if env var is set (fast, ~1 minute)
+  if (process.env.DIAGNOSE_CONNECTIONS === 'true') {
+    console.log('[INIT] Running connection diagnostics...');
+    try {
+      const { main: diagConn } = require('./diagnose-connections');
+      await diagConn();
+    } catch (err) {
+      console.error('[INIT] Connection diagnostic error:', err.message);
+    }
+    console.log('[INIT] Connection diagnostic done.');
+  }
+
+  // Run Nuclei diagnostic if env var is set
   if (process.env.NUCLEI_DIAGNOSE === 'true') {
     console.log('[INIT] Running Nuclei diagnostics...');
     try {
