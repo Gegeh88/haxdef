@@ -1,5 +1,6 @@
 const dns = require('dns');
 const { promisify } = require('util');
+const { parseDomain } = require('../../lib/parse-domain');
 
 const resolveTxt = promisify(dns.resolveTxt);
 const resolveMx = promisify(dns.resolveMx);
@@ -7,7 +8,8 @@ const resolveNs = promisify(dns.resolveNs);
 const resolveCname = promisify(dns.resolveCname);
 const resolve4 = promisify(dns.resolve4);
 
-async function checkDNS(domain) {
+async function checkDNS(domainInput) {
+  const { hostname: domain } = parseDomain(domainInput);
   const findings = [];
 
   // Check SPF record

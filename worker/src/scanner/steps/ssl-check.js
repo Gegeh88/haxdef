@@ -1,7 +1,10 @@
 const tls = require('tls');
 const https = require('https');
+const { parseDomain } = require('../../lib/parse-domain');
 
 async function checkSSL(domain) {
+  const { hostname, port } = parseDomain(domain);
+  const tlsPort = port || 443;
   const findings = [];
 
   try {
@@ -79,7 +82,7 @@ async function checkSSL(domain) {
     }
 
     // Check protocol version
-    const protocol = await checkProtocol(domain);
+    const protocol = await checkProtocol(hostname, tlsPort);
     if (protocol) {
       findings.push({
         type: 'ssl-protocol',
@@ -134,9 +137,9 @@ function getCertificate(domain) {
   });
 }
 
-function checkProtocol(domain) {
+function checkProtocol(hostname, port) {
   return new Promise((resolve) => {
-    const socket = tls.connect(443, domain, { timeout: 10000 }, () => {
+    const socket = tls.connect(port || 443, hostname, { timeout: 10000 }, () => {
       const protocol = socket.getProtocol();
       socket.destroy();
       resolve(protocol);

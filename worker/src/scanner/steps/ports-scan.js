@@ -1,5 +1,6 @@
 const net = require('net');
 const { runCommand } = require('../../lib/process-runner');
+const { parseDomain } = require('../../lib/parse-domain');
 
 const COMMON_PORTS = [
   { port: 21, service: 'FTP' },
@@ -30,12 +31,18 @@ async function scanPorts(domain) {
   const findings = [];
   let openPorts;
 
+  // Strip port suffix if present and add it to the scan list
+  const { hostname, port: customPort } = parseDomain(domain);
+  const portsToScan = customPort && !COMMON_PORTS.find(p => p.port === customPort)
+    ? [...COMMON_PORTS, { port: customPort, service: 'Custom' }]
+    : COMMON_PORTS;
+
   try {
     // Try nmap first
-    openPorts = await scanWithNmap(domain);
+    openPorts = await scanWithNmap(hostname, portsToScan);
   } catch {
     // Fallback to TCP connect scan
-    openPorts = await scanWithTCP(domain);
+    openPorts = await scanWithTCP(hostname, portsToScan);
   }
 
   if (openPorts.length === 0) {
@@ -70,13 +77,13 @@ async function scanPorts(domain) {
   return findings;
 }
 
-async function scanWithNmap(domain) {
-  const ports = COMMON_PORTS.map(p => p.port).join(',');
+async function scanWithNmap(hostname, portsList) {
+  const ports = portsList.map(p => p.port).join(',');
   const { stdout, code } = await runCommand('nmap', [
     '-Pn', '-sT', '--open',
     '-p', ports,
     '--host-timeout', '30s',
-    domain,
+    hostname,
   ], { timeout: 60000 });
 
   if (code !== 0) throw new Error('nmap failed');
@@ -87,7 +94,7 @@ async function scanWithNmap(domain) {
     const match = line.match(/^(\d+)\/tcp\s+open\s+(\S+)/);
     if (match) {
       const port = parseInt(match[1]);
-      const knownService = COMMON_PORTS.find(p => p.port === port);
+      const knownService = portsList.find(p => p.port === port);
       openPorts.push({
         port,
         service: knownService?.service || match[2],
@@ -97,10 +104,10 @@ async function scanWithNmap(domain) {
   return openPorts;
 }
 
-async function scanWithTCP(domain) {
+async function scanWithTCP(hostname, portsList) {
   const openPorts = [];
-  const promises = COMMON_PORTS.map(({ port, service }) =>
-    checkPort(domain, port).then(open => {
+  const promises = portsList.map(({ port, service }) =>
+    checkPort(hostname, port).then(open => {
       if (open) openPorts.push({ port, service });
     })
   );

@@ -1,4 +1,5 @@
 const { runCommand } = require('../../lib/process-runner');
+const { parseDomain } = require('../../lib/parse-domain');
 const dns = require('dns');
 const { promisify } = require('util');
 const resolve4 = promisify(dns.resolve4);
@@ -12,7 +13,8 @@ const COMMON_SUBDOMAINS = [
   'git', 'gitlab', 'jenkins', 'ci', 'jira', 'confluence',
 ];
 
-async function enumerateSubdomains(domain) {
+async function enumerateSubdomains(domainInput) {
+  const { hostname: domain } = parseDomain(domainInput);
   const findings = [];
   let subdomains = [];
 
