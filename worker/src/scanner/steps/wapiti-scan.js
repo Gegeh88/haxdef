@@ -17,9 +17,11 @@ async function runWapitiScan(domain, scanType = 'quick') {
     : 'xss,permanentxss,sql,timesql,ssrf,exec,file,redirect,crlf,xxe,log4shell,http_headers,csp,cookieflags,ssl,https_redirect,information_disclosure';
 
   try {
-    // Check wapiti exists
-    const { code: checkCode } = await runCommand('wapiti', ['--version'], { timeout: 10000 });
-    if (checkCode !== 0) throw new Error('wapiti not found');
+    // Check wapiti exists — try absolute path first, then PATH lookup
+    let wapitiCmd = '/usr/local/bin/wapiti';
+    const { code: checkCode, stdout: vOut, stderr: vErr } = await runCommand(wapitiCmd, ['--version'], { timeout: 15000 });
+    console.log(`[WAPITI] Version check: code=${checkCode}, out=${(vOut + vErr).slice(0, 200)}`);
+    if (checkCode !== 0) throw new Error(`wapiti --version failed with code ${checkCode}: ${(vOut + vErr).slice(0, 300)}`);
 
     // Detect protocols
     const urls = await detectProtocols(domain);
@@ -28,7 +30,7 @@ async function runWapitiScan(domain, scanType = 'quick') {
     console.log(`[WAPITI] Modules: ${modules}`);
     console.log(`[WAPITI] Max scan time: ${maxScanTime}s, depth: ${crawlDepth}`);
 
-    const { code } = await runCommand('wapiti', [
+    const { code } = await runCommand(wapitiCmd, [
       '-u', targetUrl,
       '-f', 'json',
       '-o', outputFile,
