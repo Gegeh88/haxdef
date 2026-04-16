@@ -122,7 +122,7 @@ async function runWapitiScan(domain, scanType = 'quick') {
               findings.push({
                 type: 'wapiti-anomaly',
                 title: `${anomType}${anom.parameter ? ` (${anom.parameter})` : ''}`,
-                severity: severityMap[anom.level] || 'medium',
+                severity: severityByType(anomType),
                 description: anom.info || `${anomType} at ${anom.path}`,
                 url: `${targetUrl}${anom.path || ''}`,
                 module: anom.module,
