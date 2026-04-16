@@ -2,8 +2,8 @@
 FROM python:3.13-slim AS wapiti-build
 RUN pip install --no-cache-dir wapiti3
 
-# Stage 2: Main worker image
-FROM node:20-slim
+# Stage 2: Main worker image — must use Trixie (same as python:3.13-slim) for GLIBC compatibility
+FROM node:20-trixie-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
