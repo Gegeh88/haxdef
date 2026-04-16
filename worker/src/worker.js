@@ -138,6 +138,18 @@ async function main() {
     console.error('[INIT] Failed to reset stuck scans:', err.message);
   }
 
+  // Run vulntest diagnostic — verifies scanner finds 6 known vulns on aidream.hu/vulntest/
+  if (process.env.DIAGNOSE_VULNTEST === 'true') {
+    console.log('[INIT] Running Vulntest diagnostic...');
+    try {
+      const { main: diagVuln } = require('./diagnose-vulntest');
+      await diagVuln();
+    } catch (err) {
+      console.error('[INIT] Vulntest diagnostic error:', err.message);
+    }
+    console.log('[INIT] Vulntest diagnostic done.');
+  }
+
   // Run wapiti target diagnostic — focused 3min test on demo.testfire.net
   if (process.env.DIAGNOSE_WAPITI_TARGET === 'true') {
     console.log('[INIT] Running Wapiti target diagnostic...');
