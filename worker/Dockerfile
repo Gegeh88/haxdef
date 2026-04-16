@@ -14,16 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     ca-certificates \
     git \
-    python3 \
-    libpython3.11 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python 3.13 + Wapiti from build stage
-COPY --from=wapiti-build /usr/local/lib/python3.13/ /usr/local/lib/python3.13/
-COPY --from=wapiti-build /usr/local/bin/python3.13 /usr/local/bin/python3.13
-COPY --from=wapiti-build /usr/local/lib/libpython3.13.so* /usr/local/lib/
-COPY --from=wapiti-build /usr/local/bin/wapiti /usr/local/bin/wapiti
-RUN ldconfig && chmod +x /usr/local/bin/wapiti /usr/local/bin/python3.13
+# Copy entire Python 3.13 installation from build stage
+COPY --from=wapiti-build /usr/local/ /usr/local/
+RUN ldconfig
 
 # Install Nuclei
 RUN NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | grep '"tag_name"' | cut -d'"' -f4 | tr -d 'v') \
