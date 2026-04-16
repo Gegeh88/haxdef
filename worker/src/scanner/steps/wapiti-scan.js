@@ -60,14 +60,40 @@ async function runWapitiScan(domain, scanType = 'quick') {
         const report = JSON.parse(content);
 
         // Map severity levels: 0=info, 1=low, 2=medium, 3=high, 4=critical
-        const severityMap = { 0: 'info', 1: 'low', 2: 'medium', 3: 'high', 4: 'critical' };
+        // Wapiti's level field is unreliable (almost always returns 1-2 even for criticals).
+        // Use vulnerability TYPE as primary severity indicator.
+        // See: https://github.com/wapiti-scanner/wapiti — modules use module.LEVEL_LOW/MEDIUM/HIGH inconsistently.
+        const severityByType = (vulnType) => {
+          const t = vulnType.toLowerCase();
+          // CRITICAL: code execution, SQLi, SSRF, deserialization
+          if (t.includes('command execution') || t.includes('sql injection') ||
+              t.includes('blind sql') || t.includes('server side request forgery') ||
+              t.includes('xml external entity') || t.includes('log4shell') ||
+              t.includes('spring4shell') || t.includes('shellshock') ||
+              t.includes('file inclusion') || t.includes('path traversal') ||
+              t.includes('directory traversal')) return 'critical';
+          // HIGH: XSS, file upload, CRLF, open redirect with secrets
+          if (t.includes('cross site scripting') || t.includes('xss') ||
+              t.includes('file upload') || t.includes('crlf') ||
+              t.includes('http response splitting') || t.includes('csrf') ||
+              t.includes('htaccess') || t.includes('htp')) return 'high';
+          // MEDIUM: redirects, info disclosure, weak ssl
+          if (t.includes('redirect') || t.includes('information disclosure') ||
+              t.includes('ssl') || t.includes('cookie') ||
+              t.includes('content security policy') || t.includes('csp') ||
+              t.includes('http secure headers') || t.includes('clickjacking') ||
+              t.includes('subdomain takeover')) return 'medium';
+          // LOW: anything else, fallback to wapiti level
+          const wapitiLevelMap = { 0: 'info', 1: 'low', 2: 'medium', 3: 'high', 4: 'critical' };
+          return wapitiLevelMap[2] || 'low';
+        };
 
         // Process vulnerabilities
         if (report.vulnerabilities) {
           for (const [vulnType, vulnList] of Object.entries(report.vulnerabilities)) {
             if (!Array.isArray(vulnList)) continue;
             for (const vuln of vulnList) {
-              const severity = severityMap[vuln.level] || 'info';
+              const severity = severityByType(vulnType);
               const classification = report.classifications?.[vulnType] || {};
 
               findings.push({
